@@ -65,6 +65,8 @@ c
       save pres_sum,pres2_sum
       save dens_sum,dens2_sum
 c
+c MES : force more digits in output
+      digits = 9
 c
 c     set number of steps for block averages of properties
 c

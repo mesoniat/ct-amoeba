@@ -185,7 +185,6 @@ c
 c     if (use_list)  call nblist
       if (use_list) then
          call nblist
-c        write(*,*) "using neighbor list"
 c MES : This is being called with mpole-list key
       end if
 c
@@ -232,6 +231,7 @@ c
 c
 c     call the electrostatic energy and gradient routines
 c
+      write(*,*) "Calling newcrg"
 c DCT gets new charges from current geometry
       if (use_crgtr) call newcrg
   
@@ -271,6 +271,7 @@ c
      &                      + des(j,i) + delf(j,i) + deg(j,i)
      &                      + dex(j,i)
             derivs(j,i) = desum(j,i)
+            write(*,*) "derivs(dir,atom) = ",j," ",i," ",derivs(j,i)
          end do
       end do
 c
@@ -283,6 +284,9 @@ c     if (isnan(esum)) then
      &              ' Potential Energy')
          call fatal
       end if
+
+c     call gtest(derivs)
+c     call qtest(derivs)
       write(*,*) "End of gradient subrout."
       return
       end
@@ -322,8 +326,7 @@ c
       allocate (nacti(n))
       allocate (ndcti(n))
 
-c     write(*,*) "newcrg subroutine"
-c MES : this subroutine is called
+      write(*,*) "newcrg subroutine"
 
 c  charge transfer matrix
 c  zdqt(i,j) charge transfered to atom i due to hydrogen
@@ -340,22 +343,23 @@ c  atom i :  1 = O, atom 2 = H1, atom 3 = H2
 
 c get hydrogen bonds: nacti = number accepted
 c                     ndcti = number donated
-c MES : This is correct
 
 c do this for oxygen atoms only
+c for each oxygen, get neighborlist
       do i=1,n-1
          if(type(i).eq.1) then
             do kk = 1, nelst(i)
                j=elst(kk,i)
+c if neighbor is an oxygen, calculate distance
                if(type(j).eq.1) then
                   xr = x(j) - x(i)
                   yr = y(j) - y(i)
                   zr = z(j) - z(i)
                   call image (xr,yr,zr)
                   rr = xr*xr + yr*yr + zr*zr
-  
+c if distance less than CT cut-off
                   if(rr.lt.(rct2+1.200)**2) then
-c loop over hydrogen atoms
+c loop over hydrogen atoms of neighbor
                      do l=1,2
                         xr = x(j+l) - x(i)
                         yr = y(j+l) - y(i)
@@ -363,10 +367,12 @@ c loop over hydrogen atoms
                         call image (xr,yr,zr)
                         rr  = dsqrt(xr**2+yr**2+zr**2)
         
+c if O-H distance less than Rct1
                         if(rr.lt.rct1) then
                            nacti(i) = nacti(i) + 1.d0
                            ndcti(j+l) = ndcti(j+l) + 1.d0
                         endif
+c else if O-H distance between Rct1 and Rct 2
                         if(rr.ge.rct1.and.rr.le.rct2) then
                            nacti(i) = nacti(i) 
      & + 0.5d0*(1.d0+dcos(pi*(rr-rct1)/(rct2-rct1)))
@@ -374,6 +380,7 @@ c loop over hydrogen atoms
      & + 0.5d0*(1.d0+dcos(pi*(rr-rct1)/(rct2-rct1)))
                         endif
     
+c repeat loop for H of original oxygen
                         xr = x(j) - x(i+l)
                         yr = y(j) - y(i+l)
                         zr = z(j) - z(i+l)
@@ -404,17 +411,14 @@ c        end if O_w
       enddo
 c     end loop over O_w
 
-
-
 c transfer charge
-c MES : this is correct
       do i=1,n
          if(type(i).eq.1) then
 c oxygen charge
             rpole(1,i) = rpole0(i) 
      & + zdqt(1,1)*ndcti(i+1) + zdqt(1,2)*ndcti(i+2) 
      & + zdqt(1,3)*nacti(i)
-c hydrogen hydrogen charges
+c hydrogen charges
             rpole(1,i+1) = rpole0(i+1) 
      & + zdqt(2,1)*ndcti(i+1) + zdqt(2,2)*ndcti(i+2) 
      & + zdqt(2,3)*nacti(i)
@@ -424,20 +428,22 @@ c hydrogen hydrogen charges
          endif
       enddo
 
+      if(n.le.6) then
+      write(*,*) "New charges : "
+        do i=1,n
+          pole(1,i) = rpole(1,i)
+          write(*,*) i," ",pole(1,i)
+        enddo
+      endif
 
-      do i=1,n
-       pole(1,i) = rpole(1,i)
-      enddo
-
-c     sum1 = 0.d0
-c     sum2 = 0.d0
+      sum1 = 0.d0
+      sum2 = 0.d0
 c total charge - should equal charge of system (usually zero)
-c     do i=1,n
-c      sum1 = sum1 + rpole0(i)
-c      sum2 = sum2 + rpole(1,i)
-c     enddo
-c     write(*,*) "Total system charge : "
-c     write(*,*) sum1, sum2
+      do i=1,n
+       sum1 = sum1 + rpole0(i)
+       sum2 = sum2 + rpole(1,i)
+      enddo
+c     write(*,*) "Total system charge : ",sum1,sum2
 
       deallocate (nacti)
       deallocate (ndcti)
@@ -490,19 +496,31 @@ c xna ==> % of Qct or % of HB ; dxna is its derivative wrt rr
       allocate (nacti(n))
       allocate (ndcti(n))
 
-c     write(*,*) "ect1 subroutine"
-c MES : This subroutine is called.
+c     open(unit=33,file="extraCT.dat",status='new',action='write')
 
-c     write(*,*) "CT variables :"
-c     write(*,*) "xna            dxna            zr            rr "
+c dedci already calculated, does not change within this routine
+      write(*,*) "ect1 subroutine"
+      if(n.le.6) then
+        write(*,*) "Pre-CT: dedci, dem_x, dem_y, dem_z"
+        do i=1,n
+c         write(*,*) dedci(i)
+c         dedci(i) = 0.0d0
+          write(*,*) dem(1,i),dem(2,i),dem(3,i) 
+        enddo
+
+        write(*,*) "CT variables :"
+        write(*,*) "xna            dxna            zr            rr "
+      endif
 
 c check virial
+      goto 123
       write(*,*) "Virial pre-CT"
       do i=1,3
         do j=1,3
           write(*,*) vir(i,j)
         enddo
       enddo
+123   continue
 
 c add forces to dem(i,j=1,2,3) (x,y,z)
 
@@ -513,22 +531,24 @@ c add forces to dem(i,j=1,2,3) (x,y,z)
       enddo
 
       dqt=zdqt(1,1)+zdqt(2,1)+zdqt(3,1)
-c     dqt = -0.20d0
+c     dqt = -0.020d0
 c 	i.e. total CT
       ect = 0.d0
 
 c do this for oxygen atoms only
+c for each oxygen, look at neighbor list
       do i=1,n-1
          if(type(i).eq.1) then
             do kk = 1, nelst(i)
                j=elst(kk,i)
                if(type(j).eq.1) then
-
+c if neighbor is also an oxygen, calculate distance
                   xr = x(j) - x(i)
                   yr = y(j) - y(i)
                   zr = z(j) - z(i)
                   call image (xr,yr,zr)
                   rr = xr*xr + yr*yr + zr*zr
+                  write(*,*) "rr = ",rr
 
                   if(rr.lt.(rct2+1.200)**2) then
 c check if water with oxygen atom j donates hydrogen bond to i
@@ -545,6 +565,8 @@ c check if water with oxygen atom j donates hydrogen bond to i
                            dxna = 
      & -0.5d0*dsin(pi*(rr-rct1)/(rct2-rct1))
      & *pi/(rct2-rct1)
+
+                           write(*,*) xna," ",dxna," ",zr," ",rr
 
 c MES : this set of dem passes gtest
                            dem(1,i) = dem(1,i)
@@ -603,7 +625,6 @@ c molecule with oxygen atom i donates to hydrogen bond
                         call image (xr,yr,zr)
                         rr  = dsqrt(xr**2+yr**2+zr**2)
 
-c OR ect once to avoid double-counting?
                         if(rr.le.rct1) then
 c add to charge transfer energy, no force (energy is constant)
                            ect=ect+muct*dqt+0.5d0*etact*dqt**2
@@ -617,9 +638,8 @@ c add to charge transfer energy, no force (energy is constant)
      & -0.5d0*dsin(pi*(rr-rct1)/(rct2-rct1))
      & *pi/(rct2-rct1)
 
-      write(*,*) xna," ",dxna," ",zr," ",rr
+                           write(*,*) xna," ",dxna," ",zr," ",rr
 
-c MES : this is correct for ect
                            ect=ect+muct*(xna*dqt)
      & +0.5d0*etact*(xna*dqt)**2
 
@@ -710,15 +730,27 @@ c        end if O_w
 c     end of loop over all O_w
   
 c check virial
+      goto 456
       write(*,*) "Virial post-CT"
       do i=1,3
         do j=1,3
           write(*,*) vir(i,j)
         enddo
       enddo
+456   continue
 
-      write(*,*) ect
+      write(*,*) "Ect = ",ect
       em = em + ect
+
+      if(n.le.6) then
+        write(*,*) "Post-CT: dem_x, dem_y, dem_z"
+        do i=1,n
+          write(*,*) dem(1,i),dem(2,i),dem(3,i)
+        enddo
+      endif
+
+c     close(33)
+
       return
       end
 c end of ect1 subroutine
@@ -735,6 +767,8 @@ c
 c
 c     "gtest" compares dE/dr from analytical and finite difference
 c     methods.
+c
+c     call from gradient subroutine
 c
 c     Added by Marielle Soniat 2015 July
 c
@@ -897,3 +931,96 @@ c     use_crgtr = .true.
 c end of gtest subroutine
 
 
+c
+c
+c     #################################################################
+c     ##                                                             ##
+c     ##  subroutine qtest  --  find forces via finite-difference  ##
+c     ##                                                             ##
+c     #################################################################
+c
+c
+c     "qtest" compares dE/dq from analytical and finite difference
+c     methods.
+c
+c     call from 
+c
+c     Added by Marielle Soniat 2015 Nov
+c
+c
+      subroutine qtest(derivs)
+      use sizes
+      use atoms
+      use bound
+      use couple
+      use deriv
+      use energi
+      use inter
+      use iounit
+      use limits
+      use potent
+      use rigid
+      use vdwpot
+      use virial
+      use mpole
+      use kmulti
+      implicit none
+      integer i,j
+      real*8 energy
+      real*8 delta
+      real*8 e0
+      real*8 fqn
+      real*8 fxn,fyn,fzn
+      real*8 fxneg,fyneg,fzneg
+      real*8 fxpos,fypos,fzpos
+      real*8 q0
+      real*8 qneg
+      real*8 qpos
+      real*8 eqneg
+      real*8 eqpos
+      real*8 dedq_fd
+      real*8 derivs(3,*)
+
+      write(*,*) "Entering qtest"
+
+c     get initial energy and forces
+      e0 = energy ()
+c     derivs(j,i) = derivatives, j=direction, i=atom
+      fxn = derivs(1,1)
+      fyn = derivs(2,1)
+      fzn = derivs(3,1)
+c MES : need to recalculate from within this test,
+c       not use from previous md step
+c       store forces for i=1 and i=n
+      delta = 0.001d0
+
+c     save initial charge  
+      q0 = pole(1,1)
+      write(*,*) "Charges: "
+      write(*,*) pole(1,1),q0
+
+      qneg = q0 - delta
+      pole(1,1) = qneg
+      eqneg = energy ()
+      write(*,*) pole(1,1),qneg
+
+      qpos = q0 + delta
+      pole(1,1) = qpos
+      eqpos = energy ()
+      write(*,*) pole(1,1),qpos
+
+      dedq_fd = ( eqpos - eqneg ) / ( 2.0 * delta )
+      write(*,*) "Force on n via FD   = ",dedq_fd
+      fqn = fxn*fxn + fyn*fyn + fzn*fzn
+      fqn = sqrt(fqn)
+      write(*,*) "Force on n via analytic = ",fqn
+      write(*,*) "dedci on n analytic = ",dedci(1)
+      pole(1,1) = q0
+
+c     use_crgtr = .true.
+
+      write(*,*) "Finished with qtest"
+
+      return
+      end
+c end of qtest subroutine

@@ -45,7 +45,6 @@ c
          call induce0d
       else
          call induce0a
-         write(*,*) "induce0a"
       end if
 c
 c     update the lists of previous induced dipole values
@@ -462,6 +461,8 @@ c
       deallocate (fieldp)
       deallocate (udir)
       deallocate (udirp)
+
+      write(*,*) "Done with induce0a."
       return
       end
 c

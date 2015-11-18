@@ -25,8 +25,8 @@ c
       integer i,j,ii
 
       write(*,*) "Entering empole1 subrout."
-      write(*,*) "empole1 options: ewald ",use_ewald," mlist ",
-     &  use_mlist," mpole ",use_mpole," polar ",use_polar
+c     write(*,*) "empole1 options: ewald ",use_ewald," mlist ",
+c    &  use_mlist," mpole ",use_mpole," polar ",use_polar
 c
 c
 c     choose the method for summing over multipole interactions
@@ -4602,7 +4602,7 @@ c
 c     set the energy unit conversion factor
 c
       f = electric / dielec
-      write(*,*) "electric = ",electric," dielectric = ",dielec
+c     write(*,*) "electric = ",electric," dielectric = ",dielec
 c
 c     check the sign of multipole components at chiral sites
 c
@@ -4631,6 +4631,7 @@ c
 c
 c     compute the Ewald self-energy term over all the atoms
 c
+      write(*,*) "ewald self"
 c     write (*,*) "aewald = ",aewald
       term = 2.0d0 * aewald * aewald
       fterm = -f * aewald / sqrtpi
@@ -4659,13 +4660,15 @@ c     write (*,*) "aewald = ",aewald
          ep = ep + ei
 c DCT dE/dci term
          dedci(i) = dedci(i) + 2.0d0*ci*fterm
+         write(*,*) i,"  dedci(i)    ",dedci(i)
 c MES : adding induced part
-         duixdci = 1.0d0
-         duiydci = 1.0d0
-         duizdci = 1.0d0
-         dedci(i) = dedci(i) + ( fterm * term / 3.0d0 ) 
-     &              * ( dix * duixdci + diy * duiydci 
-     &                  + diz * duizdci )
+c    removed for testing of forces without polarization
+c        duixdci = 1.0d0
+c        duiydci = 1.0d0
+c        duizdci = 1.0d0
+c        dedci(i) = dedci(i) + ( fterm * term / 3.0d0 ) 
+c    &              * ( dix * duixdci + diy * duiydci 
+c    &                  + diz * duizdci )
       end do
 c
 c     compute the self-energy torque term due to induced dipole
@@ -5130,6 +5133,8 @@ c
 c
 c     construct necessary auxiliary vectors
 c
+c MES : need to add DCT-related vectors?
+c     where are these used?
                dixdk(1) = di(2)*dk(3) - di(3)*dk(2)
                dixdk(2) = di(3)*dk(1) - di(1)*dk(3)
                dixdk(3) = di(1)*dk(2) - di(2)*dk(1)
@@ -5342,6 +5347,8 @@ c
                epo = epo + ei
 
 c DCT energy derivatives dE/dqi
+c    includes e, ei, erl, erli
+c MES : need to add more terms below? for screened and unscreened int
                dedci(i) = dedci(i) + f*(bn(0)*ck + bn(1)*(-sc(4))
      & + bn(2)*sc(6) + 0.5d0*bn(1)*(-sci(4)) 
      & - (rr1*ck+rr3*(-sc(4))+rr5*sc(6))*(1.0d0-mscale(kk)) 
@@ -5350,6 +5357,7 @@ c DCT energy derivatives dE/dqi
      & + bn(2)*sc(5) + 0.5d0*bn(1)*(sci(3)) 
      & - (rr1*ci+rr3*(sc(3))+rr5*sc(5))*(1.0d0-mscale(kk)) 
      & - 0.5d0*rr3*(sci(3))*psc3 )
+                write(*,*) i,"  dedci(i)    ",dedci(i)
 
 c
 c     increment the total intramolecular energy; assumes
@@ -6031,8 +6039,8 @@ c
 c     compute the arrays of B-spline coefficients
 c
       if (.not. use_polar) then
-         write(*,*) "use_polar ",use_polar
-         write(*,*) "   so calling bspline and table fill"
+c        write(*,*) "use_polar ",use_polar
+c        write(*,*) "   so calling bspline and table fill"
          call bspline_fill
          call table_fill
       end if
@@ -6150,7 +6158,7 @@ c     assign just the induced multipoles to PME grid
 c     and perform the 3-D FFT forward transformation
 c
       if (use_polar .and. poltyp.eq.'DIRECT') then
-         write (*,*) "poltyp is DIRECT and use_polar T"
+c        write (*,*) "poltyp is DIRECT and use_polar T"
          do i = 1, npole
             do j = 1, 10
                cmp(j,i) = 0.0d0
@@ -6295,6 +6303,7 @@ c DCT this is the only contribution to dE/dcharge ?
          f2 = 0.0d0
          f3 = 0.0d0
          dedci(i) = dedci(i) + fphi(1,i) 
+         write(*,*) i,"  dedci(i)    ",dedci(i)
          do k = 1, 10
             e = e + fmp(k,i)*fphi(k,i)
             f1 = f1 + fmp(k,i)*fphi(deriv1(k),i)

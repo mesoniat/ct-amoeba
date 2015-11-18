@@ -387,6 +387,7 @@ c
       real*8 v0,u0,t0
       real*8 term
 c
+      write(*,*) "Entered grid_pchg"
 c
 c     zero out the particle mesh Ewald charge grid
 c
@@ -464,6 +465,7 @@ c     end OpenMP directive for the major loop structure
 c
 !$OMP END DO
 !$OMP END PARALLEL
+      write(*,*) "Done with grid_pchg"
       return
       end
 c
@@ -501,6 +503,7 @@ c
       real*8 term0,term1,term2
       real*8 fmp(10,*)
 c
+      write(*,*) "Entered grid_mpole"
 c
 c     zero out the particle mesh Ewald charge grid
 c
@@ -590,6 +593,7 @@ c     end OpenMP directive for the major loop structure
 c
 !$OMP END DO
 !$OMP END PARALLEL
+      write(*,*) "Done with grid_mpole"
       return
       end
 c
@@ -628,6 +632,7 @@ c
       real*8 fuind(3,*)
       real*8 fuinp(3,*)
 c
+      write(*,*) "Entered grid_uind"
 c
 c     zero out the particle mesh Ewald charge grid
 c
@@ -716,6 +721,7 @@ c     end OpenMP directive for the major loop structure
 c
 !$OMP END DO
 !$OMP END PARALLEL
+      write(*,*) "Done with grid_uind"
       return
       end
 c
@@ -993,6 +999,7 @@ c
       real*8 fdip_phi2(10,*)
       real*8 fdip_sum_phi(20,*)
 c
+      write(*,*) "Entered fphi_uind"
 c
 c     set OpenMP directives for the major loop structure
 c
@@ -1214,6 +1221,7 @@ c     end OpenMP directive for the major loop structure
 c
 !$OMP END DO
 !$OMP END PARALLEL
+      write(*,*) "Done with fphi_uind"
       return
       end
 c
