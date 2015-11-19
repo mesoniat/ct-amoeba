@@ -285,7 +285,7 @@ c     if (isnan(esum)) then
          call fatal
       end if
 
-c     call gtest(derivs)
+      call gtest(derivs)
 c     call qtest(derivs)
       write(*,*) "End of gradient subrout."
       return
@@ -322,9 +322,13 @@ c
       real*8 xr,yr,zr,rr,pi,sum1,sum2
       real*8, allocatable :: nacti(:)
       real*8, allocatable :: ndcti(:)
+      real*8, allocatable :: dnacti(:)
+      real*8, allocatable :: dndcti(:)
 
       allocate (nacti(n))
       allocate (ndcti(n))
+      allocate (dnacti(n))
+      allocate (dndcti(n))
 
       write(*,*) "newcrg subroutine"
 
@@ -338,6 +342,8 @@ c  atom i :  1 = O, atom 2 = H1, atom 3 = H2
       do i=1,n
          nacti(i) = 0.d0
          ndcti(i) = 0.d0
+         dnacti(i) = 0.d0
+         dndcti(i) = 0.d0
          dedci(i) = 0.d0
       enddo
 
@@ -378,6 +384,12 @@ c else if O-H distance between Rct1 and Rct 2
      & + 0.5d0*(1.d0+dcos(pi*(rr-rct1)/(rct2-rct1)))
                            ndcti(j+l) = ndcti(j+l) 
      & + 0.5d0*(1.d0+dcos(pi*(rr-rct1)/(rct2-rct1)))
+                           dnacti(i) = dnacti(i)
+     & -0.5d0*dsin(pi*(rr-rct1)/(rct2-rct1))
+     & *pi/(rct2-rct1)
+                           dndcti(j+l) = dndcti(j+l)
+     & -0.5d0*dsin(pi*(rr-rct1)/(rct2-rct1))
+     & *pi/(rct2-rct1)
                         endif
     
 c repeat loop for H of original oxygen
@@ -396,6 +408,12 @@ c repeat loop for H of original oxygen
      & + 0.5d0*(1.d0+dcos(pi*(rr-rct1)/(rct2-rct1)))
                            ndcti(i+l) = ndcti(i+l) 
      & + 0.5d0*(1.d0+dcos(pi*(rr-rct1)/(rct2-rct1)))
+                           dnacti(j) = dnacti(j)
+     & -0.5d0*dsin(pi*(rr-rct1)/(rct2-rct1))
+     & *pi/(rct2-rct1)
+                           dndcti(i+l) = dndcti(i+l)
+     & -0.5d0*dsin(pi*(rr-rct1)/(rct2-rct1))
+     & *pi/(rct2-rct1)
                         endif
 
                      enddo
@@ -439,14 +457,22 @@ c hydrogen charges
       sum1 = 0.d0
       sum2 = 0.d0
 c total charge - should equal charge of system (usually zero)
+      write(*,*) "number HB and derivatives wrt r"
       do i=1,n
-       sum1 = sum1 + rpole0(i)
-       sum2 = sum2 + rpole(1,i)
+        sum1 = sum1 + rpole0(i)
+        sum2 = sum2 + rpole(1,i)
+        write(*,*) nacti(i),dnacti(i)
+        write(*,*) ndcti(i),dndcti(i)
       enddo
 c     write(*,*) "Total system charge : ",sum1,sum2
 
       deallocate (nacti)
       deallocate (ndcti)
+      deallocate (dnacti)
+      deallocate (dndcti)
+c MES : dnacti and dndcti should be (de)allocated elsewhere
+c    need to be used in ect1 for calc of dem
+ 
 
  993  format(3f14.6)
       return
@@ -490,11 +516,11 @@ c
 c xna ==> % of Qct or % of HB ; dxna is its derivative wrt rr
       real*8 tmp1,tmp2,tmp3
       real*8 xr0,yr0,zr0
-      real*8, allocatable :: nacti(:)
-      real*8, allocatable :: ndcti(:)
+c     real*8, allocatable :: nacti(:)
+c     real*8, allocatable :: ndcti(:)
 
-      allocate (nacti(n))
-      allocate (ndcti(n))
+c     allocate (nacti(n))
+c     allocate (ndcti(n))
 
 c     open(unit=33,file="extraCT.dat",status='new',action='write')
 
@@ -525,10 +551,12 @@ c check virial
 c add forces to dem(i,j=1,2,3) (x,y,z)
 
       pi = 4.d0*datan(1.d0)
-      do i=1,n
-         nacti(i) = 0.d0
-         ndcti(i) = 0.d0
-      enddo
+c     do i=1,n
+c        nacti(i) = 0.d0
+c        ndcti(i) = 0.d0
+c        dnacti(i) = 0.d0
+c        dndcti(i) = 0.d0
+c     enddo
 
       dqt=zdqt(1,1)+zdqt(2,1)+zdqt(3,1)
 c     dqt = -0.020d0
@@ -568,7 +596,6 @@ c check if water with oxygen atom j donates hydrogen bond to i
 
                            write(*,*) xna," ",dxna," ",zr," ",rr
 
-c MES : this set of dem passes gtest
                            dem(1,i) = dem(1,i)
      & +(dedci(i)*zdqt(1,3)+dedci(i+1)*zdqt(2,3)
      & +dedci(i+2)*zdqt(3,3))*dxna*xr/rr
@@ -637,6 +664,7 @@ c add to charge transfer energy, no force (energy is constant)
                            dxna = 
      & -0.5d0*dsin(pi*(rr-rct1)/(rct2-rct1))
      & *pi/(rct2-rct1)
+c dxna = N' in Eqn A9 of Lee 2011 JCP
 
                            write(*,*) xna," ",dxna," ",zr," ",rr
 
@@ -749,6 +777,10 @@ c check virial
         enddo
       endif
 
+c     deallocate (nacti(n))
+c     deallocate (ndcti(n))
+c     deallocate (dnacti(n))
+c     deallocate (dndcti(n))
 c     close(33)
 
       return
@@ -765,12 +797,12 @@ c     ##                                                             ##
 c     #################################################################
 c
 c
-c     "gtest" compares dE/dr from analytical and finite difference
-c     methods.
+c     "gtest" compares dE/dr and dq/dr from analytical and 
+c     finite difference methods.
 c
 c     call from gradient subroutine
 c
-c     Added by Marielle Soniat 2015 July
+c     Added by Marielle Soniat 2015 July, Nov
 c
 c
       subroutine gtest(derivs)
@@ -787,6 +819,8 @@ c
       use rigid
       use vdwpot
       use virial
+      use mpole
+      use kmulti
       implicit none
       integer i,j
       real*8 energy
@@ -795,11 +829,12 @@ c
       real*8 fxn,fyn,fzn
       real*8 fxneg,fyneg,fzneg
       real*8 fxpos,fypos,fzpos
-      real*8 x0,y0,z0
+      real*8 x0,y0,z0,q0
       real*8 xneg,yneg,zneg
       real*8 xpos,ypos,zpos
       real*8 exneg,eyneg,ezneg
       real*8 expos,eypos,ezpos
+      real*8 qneg,qpos,dqdr_fd
       real*8 dedx_fd,dedy_fd,dedz_fd
       real*8 derivs(3,*)
 
@@ -825,6 +860,7 @@ c     save initial position
       x0 = x(1)
       y0 = y(1)
       z0 = z(1)
+      q0 = pole(1,1)
 c     write(*,*) "(x,y,z) of 1 : ",x0," ",y0," ",z0
 
 c     change for position
@@ -832,18 +868,25 @@ c     change for position
 
 c     for first atom, forces in x, y, and z
 c     restore original position after calculation
-c     xneg = x0 - delta
-c     x(1) = xneg
-c     exneg = energy ()
+      xneg = x0 - delta
+      x(1) = xneg
+      exneg = energy ()
+      qneg = pole(1,1)
 
-c     xpos = x0 + delta
-c     x(1) = xpos
-c     expos = energy ()
+      xpos = x0 + delta
+      x(1) = xpos
+      expos = energy ()
+      qpos = pole(1,1)
 
-c     dedx_fd = ( expos - exneg ) / ( 2.0 * delta )
-c     write(*,*) "Force in x on 1 via FD  = ",dedx_fd
-c     write(*,*) "Force in x on 1 analtic = ",fx1
-c     x(1) = x0
+      dedx_fd = ( expos - exneg ) / ( 2.0 * delta )
+      write(*,*) "Force in x on 1 via FD   = ",dedx_fd
+      write(*,*) "Force in x on 1 analytic = ",fx1
+
+      dqdr_fd = ( qpos - qneg ) / ( 2.0 * delta )
+      write(*,*) "dq/dr FD = ",dqdr_fd 
+
+      x(1) = x0
+      pole(1,1) = q0
 
 c     yneg = y0 - delta
 c     y(1) = yneg
@@ -876,10 +919,10 @@ c     z(1) = z0
 c     write(*,*) "(x,y,z) of 1 : ",x(1)," ",y(1)," ",z(1)
 
 c     for final atom, forces in x, y, and z
-      x0 = x(n)
-      y0 = y(n)
-      z0 = z(n)
-      write(*,*) "(x,y,z) of n : ",x(n)," ",y(n)," ",z(n)
+c     x0 = x(n)
+c     y0 = y(n)
+c     z0 = z(n)
+c     write(*,*) "(x,y,z) of n : ",x(n)," ",y(n)," ",z(n)
 
 c     xneg = x0 - delta
 c     x(n) = xneg
@@ -909,18 +952,18 @@ c     y(n) = y0
 
 c     use_crgtr = .false.
 
-      zneg = z0 - delta
-      z(n) = zneg
-      ezneg = energy ()
+c     zneg = z0 - delta
+c     z(n) = zneg
+c     ezneg = energy ()
 
-      zpos = z0 + delta
-      z(n) = zpos
-      ezpos = energy ()
+c     zpos = z0 + delta
+c     z(n) = zpos
+c     ezpos = energy ()
 
-      dedz_fd = ( ezpos - ezneg ) / ( 2.0 * delta )
-      write(*,*) "Force in z on n via FD   = ",dedz_fd
-      write(*,*) "Force in z on n analytic = ",fzn
-      z(n) = z0
+c     dedz_fd = ( ezpos - ezneg ) / ( 2.0 * delta )
+c     write(*,*) "Force in z on n via FD   = ",dedz_fd
+c     write(*,*) "Force in z on n analytic = ",fzn
+c     z(n) = z0
 
 c     use_crgtr = .true.
 
