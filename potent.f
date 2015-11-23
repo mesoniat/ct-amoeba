@@ -58,7 +58,7 @@ c
       logical use_metal,use_geom
       logical use_extra,use_born
       logical use_orbit
-      logical use_crgtr
+      logical use_crgtr,use_grad
 c added DCT variable
       save
       end

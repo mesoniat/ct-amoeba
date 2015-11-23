@@ -208,11 +208,14 @@ c
 c
 c     call the electrostatic energy component routines
 c
+c     use_grad = .true.
+c     if (use_crgtr)   call newcrg
       if (use_charge)  call echarge3
       if (use_chgdpl)  call echgdpl3
       if (use_dipole)  call edipole3
       if (use_mpole .or. use_polar)  call empole3
       if (use_rxnfld)  call erxnfld3
+c     if (use_crgtr)   call ectE
 c
 c     call any miscellaneous energy component routines
 c

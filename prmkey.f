@@ -36,6 +36,8 @@ c
       character*120 record
       character*120 string
 c
+c MES : default use_grad
+      use_grad = .false.
 c
 c     parse the line to extract any possible keyword
 c
@@ -54,7 +56,7 @@ c
          use_bond = .true.
 c adding DCT logic
       else if (keyword(1:5) .eq. 'DCT ') then
-        use_crgtr = .true.
+         use_crgtr = .true.
          if (value .eq. 'NONE')  use_bond = .false.
       else if (keyword(1:10) .eq. 'ANGLETERM ') then
          call getword (record,value,next)

@@ -109,7 +109,7 @@ c
 c     call the electrostatic energy component routines
 c
 c DCT gets new charges from current geometry
-c     if (use_crgtr) call newcrg
+      if (use_crgtr) call newcrg
 c
       if (use_charge)  call echarge
       if (use_chgdpl)  call echgdpl
@@ -126,7 +126,7 @@ c
 c
 c DCT gets charge transfer contribution to forces
 c        and adds charge transfer energy to em
-      if (use_crgtr) call ect1
+      if (use_crgtr) call ectE
 c
 c     sum up to give the total potential energy
 c

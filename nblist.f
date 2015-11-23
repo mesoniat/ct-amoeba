@@ -21,6 +21,7 @@ c
       use potent
       implicit none
 c
+c     write(*,*) "Entered nblist subroutine"
 c
 c     update the vdw and electrostatic neighbor lists
 c
@@ -29,6 +30,8 @@ c
       if ((use_mpole.or.use_polar.or.use_solv) .and. use_mlist)
      &      call mlist
       if (use_polar .and. use_ulist)  call ulist
+
+c     write(*,*) "Done with nblist subroutine"
       return
       end
 c
@@ -818,6 +821,7 @@ c
       real*8 radius,r2
       logical, allocatable :: update(:)
 c
+c     write(*,*) "Entered mlist subroutine."
 c
 c     perform dynamic allocation of some local arrays
 c
@@ -833,6 +837,8 @@ c
      &              ' be used with Replicas')
          call fatal
       end if
+
+c     write(*,*) "check 1"
 c
 c     perform a complete list build instead of an update
 c
@@ -841,10 +847,13 @@ c
          if (octahedron) then
             call mbuild
          else
+c           write(*,*) "Will call mlight for initial list creation."
             call mlight
          end if
          return
       end if
+
+c     write(*,*) "check 2"
 c
 c     test sites for displacement exceeding half the buffer, and
 c     rebuild the higher numbered neighbors of updated sites
@@ -883,6 +892,7 @@ c
          end if
       end do
 !$OMP END DO
+c     write(*,*) "check 3"
 c
 c     adjust lists of lower numbered neighbors of updated sites
 c
@@ -926,6 +936,7 @@ c
          end if
       end do
 !$OMP END DO
+c     write(*,*) "check 4"
 c
 c     check to see if any neighbor lists are too long
 c
@@ -944,6 +955,7 @@ c
 c     perform deallocation of some local arrays
 c
       deallocate (update)
+c     write(*,*) "Done with mlist"
       return
       end
 c
@@ -1056,6 +1068,7 @@ c
       real*8, allocatable :: zsort(:)
       logical repeat
 c
+c     write(*,*) "Entered mlight subroutine"
 c
 c     perform dynamic allocation of some local arrays
 c
@@ -1065,6 +1078,8 @@ c
 c
 c     transfer interaction site coordinates to sorting arrays
 c
+c     write(*,*) "new check 1"
+
       do i = 1, npole
          nelst(i) = 0
          ii = ipole(i)
@@ -1075,11 +1090,15 @@ c
          ysort(i) = y(ii)
          zsort(i) = z(ii)
       end do
+
+c     write(*,*) "new check 2"
 c
 c     use the method of lights to generate neighbors
 c
       off = sqrt(mbuf2)
       call lightn (off,npole,xsort,ysort,zsort)
+
+c     write(*,*) "new check 3"
 c
 c     perform deallocation of some local arrays
 c
@@ -1158,6 +1177,7 @@ c     end OpenMP directives for the major loop structure
 c
 !$OMP END DO
 !$OMP END PARALLEL
+c     write(*,*) "Done with mlight" 
       return
       end
 c
@@ -1574,6 +1594,7 @@ c
       real*8, allocatable :: yfrac(:)
       real*8, allocatable :: zfrac(:)
 c
+c     write(*,*) "Entered lightn subroutine"
 c
 c     truncated octahedron periodicity is not handled at present
 c
@@ -1585,6 +1606,8 @@ c
             call fatal
          end if
       end if
+
+c     write(*,*) "grrr 1"
 c
 c     set the light width based on input distance cutoff
 c
@@ -1604,6 +1627,8 @@ c
          ycut = min(ycut,ycell2)
          zcut = min(zcut,zcell2)
       end if
+
+c     write(*,*) "grrr 2"
 c
 c     perform dynamic allocation of some local arrays
 c
@@ -1635,25 +1660,33 @@ c
             end do
          end if
       end if
+
+c     write(*,*) "grrr 3"
 c
 c     use images to move coordinates into periodic cell
 c
       if (use_bounds) then
+c        write(*,*) "Another PBC problem?    nsite = ",nsite
          do i = 1, nsite
             xsort(i) = xfrac(i)
             ysort(i) = yfrac(i)
             zsort(i) = zfrac(i)
             do while (abs(xsort(i)) .gt. xcell2)
                xsort(i) = xsort(i) - sign(xcell,xsort(i))
+c              write(*,*) "stuck in x for i = ",i
             end do
             do while (abs(ysort(i)) .gt. ycell2)
                ysort(i) = ysort(i) - sign(ycell,ysort(i))
+c              write(*,*) "stuck in y"
             end do
             do while (abs(zsort(i)) .gt. zcell2)
                zsort(i) = zsort(i) - sign(zcell,zsort(i))
+c              write(*,*) "stuck in z"
             end do
          end do
       end if
+
+c     write(*,*) "grrr 4"
 c
 c     perform deallocation of some local arrays
 c
@@ -1692,12 +1725,16 @@ c
          allocate (rgy(nlight))
          allocate (rgz(nlight))
       end if
+
+c     write(*,*) "grrr 5"
 c
 c     sort the coordinate components into ascending order
 c
       call sort2 (nlight,xsort,locx)
       call sort2 (nlight,ysort,locy)
       call sort2 (nlight,zsort,locz)
+
+c     write(*,*) "grrr 6"
 c
 c     index the position of each atom in the sorted coordinates
 c
@@ -1706,6 +1743,8 @@ c
          rgy(locy(i)) = i
          rgz(locz(i)) = i
       end do
+
+c     write(*,*) "grrr 7"
 c
 c     find the negative x-coordinate boundary for each atom
 c
@@ -1731,6 +1770,8 @@ c
          end if
          kbx(k) = j
       end do
+
+c     write(*,*) "grrr 8"
 c
 c     find the positive x-coordinate boundary for each atom
 c
@@ -1756,6 +1797,8 @@ c
          end if
          kex(k) = j
       end do
+
+c     write(*,*) "grrr 9"
 c
 c     find the negative y-coordinate boundary for each atom
 c
@@ -1781,6 +1824,8 @@ c
          end if
          kby(k) = j
       end do
+ 
+c     write(*,*) "grrr 10"
 c
 c     find the positive y-coordinate boundary for each atom
 c
@@ -1806,6 +1851,8 @@ c
          end if
          key(k) = j
       end do
+
+c     write(*,*) "grrr 11"
 c
 c     find the negative z-coordinate boundary for each atom
 c
@@ -1831,6 +1878,8 @@ c
          end if
          kbz(k) = j
       end do
+
+c     write(*,*) "grrr 12"
 c
 c     find the positive z-coordinate boundary for each atom
 c
@@ -1856,6 +1905,7 @@ c
          end if
          kez(k) = j
       end do
+c     write(*,*) "Done with lightn"
       return
       end
 c
