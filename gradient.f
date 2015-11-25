@@ -383,6 +383,7 @@ c  atom i :  1 = O, atom 2 = H1, atom 3 = H2
            dndcti(i) = 0.d0
          end if
          dedci(i) = 0.d0
+         depdci(i) = 0.d0
       enddo
 
 c get hydrogen bonds: nacti = number accepted

@@ -5969,6 +5969,7 @@ c
       real*8 cphim(4),cphid(4)
       real*8 cphip(4)
       real*8 a(3,3),ftc(10,10)
+      real*8 detdci
       real*8, allocatable :: frc(:,:)
       real*8, allocatable :: trq(:,:)
       real*8, allocatable :: fuind(:,:)
@@ -5981,6 +5982,8 @@ c
       real*8, allocatable :: fphidp(:,:)
       real*8, allocatable :: cphi(:,:)
       real*8, allocatable :: qgrip(:,:,:,:)
+      real*8, allocatable :: dfphidci(:,:)
+      real*8, allocatable :: dfuinddci(:,:)
 c
       write(*,*) "emrecip1"
 c
@@ -6008,6 +6011,17 @@ c
       allocate (fphip(10,npole))
       allocate (fphidp(20,npole))
       allocate (cphi(10,npole))
+      allocate (dfphidci(20,npole))
+      allocate (dfuinddci(3,npole))
+      do i = 1 , npole
+        do j = 1,3
+          dfuinddci(j,i) = 0.0d0
+          dfphidci(j,i) = 0.0d0
+        end do
+        do j = 4,20
+          dfphidci(j,i) = 0.0d0
+        end do
+      end do
 c
 c     zero out the temporary virial accumulation variables
 c
@@ -6395,6 +6409,13 @@ c        write(*,*) "check 10"
      &                          + a(j,3)*uind(3,i)
                fuinp(j,i) = a(j,1)*uinp(1,i) + a(j,2)*uinp(2,i)
      &                          + a(j,3)*uinp(3,i)
+c MES
+c              dfuinddci(j,i) = a(j,1)*duinddci(1,i) 
+c    &                          + a(j,2)*duinddci(2,i)
+c    &                          + a(j,3)*duinddci(3,i)
+c              dfuinpdci(j,i) = a(j,1)*duinpdci(1,i) 
+c    &                          + a(j,2)*duinpdci(2,i)
+c    &                          + a(j,3)*duinpdci(3,i)
             end do
          end do
 c
@@ -6421,6 +6442,9 @@ c
                   term = qfac(i,j,k)
                   qgrid(1,i,j,k) = term * qgrid(1,i,j,k)
                   qgrid(2,i,j,k) = term * qgrid(2,i,j,k)
+c MES
+c                 dqgriddci(1,i,j,k) = term * dqgriddci(1,i,j,k)
+c                 dqgriddci(2,i,j,k) = term * dqgriddci(2,i,j,k)
                end do
             end do
          end do
@@ -6433,9 +6457,13 @@ c
             do j = 1, 10
                fphid(j,i) = electric * fphid(j,i)
                fphip(j,i) = electric * fphip(j,i)
+c MES
+c              dfphiddci(j,i) = electric * dfphiddci(j,i)
+c              dfphipdci(j,i) = electric * dfphipdci(j,i)
             end do
             do j = 1, 20
                fphidp(j,i) = electric * fphidp(j,i)
+c              dfphidpdci(j,i) = electric * dfphidpdci(j,i)
             end do
          end do
 c
@@ -6457,10 +6485,16 @@ c           write(*,*) "i ",i," fphip x ",fphip(1,i)," y ",fphip(2,i),
 c    &                     " z ",fphip(3,i)
 c           write(*,*) "i ",i," fmp ",fmp(1,i),"    cmp ",cmp(1,i)
             do k = 1, 3
+               detdci = 0.0d0
                j1 = deriv1(k+1)
                j2 = deriv2(k+1)
                j3 = deriv3(k+1)
                e = e + fuind(k,i)*fphi(k+1,i)
+C MES 
+               detdci = detdci + dfuinddci(k,i)*fphi(k+1,i)
+     &                       + fuind(k,i)*dfphidci(k+1,i)
+               detdci = 0.5*detdci
+               depdci(i) = depdci(i) + detdci
                f1 = f1 + (fuind(k,i)+fuinp(k,i))*fphi(j1,i)
      &                 + fuind(k,i)*fphip(j1,i)
      &                 + fuinp(k,i)*fphid(j1,i)
@@ -6505,6 +6539,8 @@ c
          do i = 1, npole
             do k = 1, 10
                fphidp(k,i) = 0.5d0 * fphidp(k,i)
+c MES
+c              dfphidpdci(k,i) = 0.5d0 * dfphidpdci(k,i)
             end do
          end do
          call fphi_to_cphi (fphidp,cphi)
@@ -6627,6 +6663,8 @@ c
       deallocate (fphid)
       deallocate (fphip)
       deallocate (fphidp)
+      deallocate (dfuinddci)
+      deallocate (dfphidci)
       deallocate (cphi)
       return
       end

@@ -43,6 +43,7 @@ c add DCT variable, charge before CT
       real*8, allocatable :: rpole0(:)
 c add DCT variable, dE/dcharge_i
       real*8, allocatable :: dedci(:)
+      real*8, allocatable :: depdci(:)
       character*8, allocatable :: polaxe(:)
       save
       end
