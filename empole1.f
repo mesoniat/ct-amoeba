@@ -4660,15 +4660,14 @@ c     write (*,*) "aewald = ",aewald
          ep = ep + ei
 c DCT dE/dci term
          dedci(i) = dedci(i) + 2.0d0*ci*fterm
-         write(*,*) i,"  dedci(i)    ",dedci(i)
+c        write(*,*) i,"  dedci(i)    ",dedci(i)
 c MES : adding induced part
-c    removed for testing of forces without polarization
-c        duixdci = 1.0d0
-c        duiydci = 1.0d0
-c        duizdci = 1.0d0
-c        dedci(i) = dedci(i) + ( fterm * term / 3.0d0 ) 
-c    &              * ( dix * duixdci + diy * duiydci 
-c    &                  + diz * duizdci )
+         duixdci = 0.0d0
+         duiydci = 0.0d0
+         duizdci = 0.0d0
+         depdci(i) = depdci(i) + ( fterm * term / 3.0d0 ) 
+     &              * ( dix * duixdci + diy * duiydci 
+     &                  + diz * duizdci )
       end do
 c
 c     compute the self-energy torque term due to induced dipole
@@ -4984,6 +4983,8 @@ c
 !$OMP& firstprivate(mscale,pscale,dscale,uscale)
 !$OMP DO reduction(+:emo,epo,eintrao,demo1,demo2,depo1,depo2,viro)
 !$OMP& schedule(guided)
+c
+c MES : need to add dedci and depdci to above OMP list?
 c
 c     compute the real space portion of the Ewald summation
 c
@@ -5350,14 +5351,16 @@ c DCT energy derivatives dE/dqi
 c    includes e, ei, erl, erli
 c MES : need to add more terms below? for screened and unscreened int
                dedci(i) = dedci(i) + f*(bn(0)*ck + bn(1)*(-sc(4))
-     & + bn(2)*sc(6) + 0.5d0*bn(1)*(-sci(4)) 
-     & - (rr1*ck+rr3*(-sc(4))+rr5*sc(6))*(1.0d0-mscale(kk)) 
-     & - 0.5d0*rr3*(-sci(4))*psc3 )
+     & + bn(2)*sc(6) + 0.5d0*bn(1)*(-sci(4))) 
+               depdci(i) = depdci(i) - f*(
+     & + (rr1*ck+rr3*(-sc(4))+rr5*sc(6))*(1.0d0-mscale(kk)) 
+     & + 0.5d0*rr3*(-sci(4))*psc3 )
                dedci(k) = dedci(k) + f*(bn(0)*ci + bn(1)*(sc(3))
-     & + bn(2)*sc(5) + 0.5d0*bn(1)*(sci(3)) 
-     & - (rr1*ci+rr3*(sc(3))+rr5*sc(5))*(1.0d0-mscale(kk)) 
-     & - 0.5d0*rr3*(sci(3))*psc3 )
-                write(*,*) i,"  dedci(i)    ",dedci(i)
+     & + bn(2)*sc(5) + 0.5d0*bn(1)*(sci(3)))
+               depdci(i) = depdci(i) - f*(
+     & + (rr1*ci+rr3*(sc(3))+rr5*sc(5))*(1.0d0-mscale(kk)) 
+     & + 0.5d0*rr3*(sci(3))*psc3 )
+c                write(*,*) i,"  dedci(i)    ",dedci(i)
 
 c
 c     increment the total intramolecular energy; assumes
@@ -5369,8 +5372,8 @@ c
                   eintrao = eintrao + 0.5d0*pscale(kk)
      &                         * (rr3*(gli(1)+gli(6))*scale3
      &                              + rr5*(gli(2)+gli(7))*scale5
-c MES : need deriv.s here?
      &                              + rr7*gli(3)*scale7)
+c MES : need deriv.s here?
                end if
 c
 c     set flags to compute components without screening
