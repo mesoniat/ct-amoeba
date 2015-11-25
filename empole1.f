@@ -5369,6 +5369,7 @@ c
                   eintrao = eintrao + 0.5d0*pscale(kk)
      &                         * (rr3*(gli(1)+gli(6))*scale3
      &                              + rr5*(gli(2)+gli(7))*scale5
+c MES : need deriv.s here?
      &                              + rr7*gli(3)*scale7)
                end if
 c

@@ -582,6 +582,8 @@ c
                         t2 = thetai1(3,m,iatm)
                         qgrid(1,i,j,k) = qgrid(1,i,j,k) + term0*t0
      &                                      + term1*t1 + term2*t2
+c MES
+c                       dqgdci(1,i,j,k) = dqgdci(1,i,j,k) + u0*v0*t0
                      end do
                   end do
                end do
@@ -700,6 +702,13 @@ c
                      term02 = fuinp(2,isite)*u1*v0
      &                           + fuinp(3,isite)*u0*v1
                      term12 = fuinp(1,isite)*u0*v0
+c MES
+c                    dterm01dci = dfuinddci(2,isite)*u1*v0
+c    &                           + dfuinddci(3,isite)*u0*v1
+c                    dterm11dci = dfuinddci(1,isite)*u0*v0
+c                    dterm02dci = dfuinpdci(2,isite)*u1*v0
+c    &                           + dfuinpdci(3,isite)*u0*v1
+c                    dterm12dci = dfuinpdci(1,isite)*u0*v0
                      do ii = abound(1), abound(2)
                         i = ii
                         m = i + offsetx
@@ -710,6 +719,13 @@ c
      &                                      + term11*t1
                         qgrid(2,i,j,k) = qgrid(2,i,j,k) + term02*t0
      &                                      + term12*t1
+c MES
+c                       dqgdci(1,i,j,k) = dqgdci(1,i,j,k) 
+c    &                                      + dterm01dci*t0
+c    &                                      + dterm11dci*t1
+c                       dqgdci(2,i,j,k) = dqgdci(2,i,j,k) 
+c    &                                      + dterm02dci*t0
+c    &                                      + dterm12dci*t1
                      end do
                   end do
                end do
@@ -922,6 +938,9 @@ c        end of it3
 c
 c        mpole of atom/isite calc from grid
          fphi(1,isite) = tuv000
+c        dtuv000dqg = thetai1(1,it1,iatm)*thetai2(1,it2,iatm)
+c    &                     *thetai3(1,it3,iatm)
+c        dfphidqg(1,isite) = dtuv000dqg
          fphi(2,isite) = tuv100
          fphi(3,isite) = tuv010
          fphi(4,isite) = tuv001
@@ -950,6 +969,7 @@ c
 !$OMP END PARALLEL
       return
       end
+c     end of fphi_mpole
 c
 c
 c     #############################################################
@@ -1010,6 +1030,7 @@ c
 c
 c     extract the induced dipole field at each site
 c
+c MES : a few deriv.s below
       do isite = 1, npole
          iatm = ipole(isite)
          igrd0 = igrid(1,iatm)
@@ -1105,9 +1126,11 @@ c
                   tq_1 = qgrid(1,i,j,k)
                   tq_2 = qgrid(2,i,j,k)
                   t0_1 = t0_1 + tq_1*thetai1(1,it1,iatm)
+c                 dt0_1dqg = dt0_1dqg + thetai1(1,it1,iatm)
                   t1_1 = t1_1 + tq_1*thetai1(2,it1,iatm)
                   t2_1 = t2_1 + tq_1*thetai1(3,it1,iatm)
                   t0_2 = t0_2 + tq_2*thetai1(1,it1,iatm)
+c                 dt0_2dqg = dt0_2dqg + thetai1(1,it1,iatm)
                   t1_2 = t1_2 + tq_2*thetai1(2,it1,iatm)
                   t2_2 = t2_2 + tq_2*thetai1(3,it1,iatm)
                   t3 = t3 + (tq_1+tq_2)*thetai1(4,it1,iatm)
@@ -1125,9 +1148,11 @@ c
                tu11_2 = tu11_2 + t1_2*u1
                tu02_2 = tu02_2 + t0_2*u2
                t0 = t0_1 + t0_2
+c              dt0dqg = dt0_1dqg + dt0_2dqg
                t1 = t1_1 + t1_2
                t2 = t2_1 + t2_2
                tu00 = tu00 + t0*u0
+c              dtu00dqg = dtu00dqg + dt0dqg*u0
                tu10 = tu10 + t1*u0
                tu01 = tu01 + t0*u1
                tu20 = tu20 + t2*u0
@@ -1157,6 +1182,7 @@ c
             tuv101_2 = tuv101_2 + tu10_2*v1
             tuv011_2 = tuv011_2 + tu01_2*v1
             tuv000 = tuv000 + tu00*v0
+c           dtuv000dqg = dtuv000dqg + dtu00dqg*v0
             tuv100 = tuv100 + tu10*v0
             tuv010 = tuv010 + tu01*v0
             tuv001 = tuv001 + tu00*v1
@@ -1196,6 +1222,8 @@ c
          fdip_phi2(9,isite) = tuv101_2
          fdip_phi2(10,isite) = tuv011_2
          fdip_sum_phi(1,isite) = tuv000
+c MES
+c        dfdip_sum_phidqg(1,isite) = dtuv000dqg
          fdip_sum_phi(2,isite) = tuv100
          fdip_sum_phi(3,isite) = tuv010
          fdip_sum_phi(4,isite) = tuv001
@@ -1372,6 +1400,8 @@ c     apply the transformation to get the Cartesian potential
 c
       do i = 1, npole
          cphi(1,i) = ftc(1,1) * fphi(1,i)
+c MES
+c        dcphidqg(1,i) = ftc(1,1) * dfphidqg(1,i)
 c        write(*,*) "cphi(1,i) = ",cphi(1,i)
          do j = 2, 4
             cphi(j,i) = 0.0d0

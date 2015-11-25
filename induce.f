@@ -232,6 +232,7 @@ c     get the electrostatic field due to permanent multipoles
 c
       if (use_ewald) then
          call dfield0c (field,fieldp)
+c MES : using dfield0c
       else if (use_mlist) then
          call dfield0b (field,fieldp)
       else
@@ -246,6 +247,9 @@ c
             udirp(j,i) = polarity(i) * fieldp(j,i)
             uind(j,i) = udir(j,i)
             uinp(j,i) = udirp(j,i)
+c MES
+c           duinddci(j,i) = polarity(i) * dfielddci(j,i)
+c           duinpdci(j,i) = polarity(i) * dfieldpdci(j,i)
          end do
       end do
 c
@@ -302,6 +306,7 @@ c
          end if
 c
 c     set initial conjugate gradient residual and conjugate vector
+c MES : not sure if I need derivatives in the conj grad part
 c
          do i = 1, npole
             poli(i) = max(polmin,polarity(i))
@@ -1562,6 +1567,9 @@ c
          do j = 1, 3
             field(j,i) = field(j,i) + term*uind(j,i)
             fieldp(j,i) = fieldp(j,i) + term*uinp(j,i)
+c MES
+c           dfielddci(j,i) = dfielddci(j,i) + term*duinddci(j,i)
+c           dfieldpdci(j,i) = dfieldpdci(j,i) + term*duinpdci(j,i)
          end do
       end do
 c
@@ -1583,6 +1591,7 @@ c
             do j = 1, 3
                field(j,i) = field(j,i) - term*ucell(j)
                fieldp(j,i) = fieldp(j,i) - term*ucellp(j)
+c MES : need derivatives here too?
             end do
          end do
       end if
@@ -1670,6 +1679,7 @@ c
       call fftfront
 c
 c     make the scalar summation over reciprocal lattice
+c MES : Sagui Eqn 2.46 ? if so, no charge dependence 
 c
       qfac(1,1,1) = 0.0d0
       pterm = (pi/aewald)**2
@@ -1727,6 +1737,9 @@ c
                term = qfac(i,j,k)
                qgrid(1,i,j,k) = term * qgrid(1,i,j,k)
                qgrid(2,i,j,k) = term * qgrid(2,i,j,k)
+c MES
+c              dqgdci(1,i,j,k) = term * dqgdci(1,i,j,k)
+c              dqgdci(2,i,j,k) = term * dqgdci(2,i,j,k)
             end do
          end do
       end do
@@ -1741,6 +1754,7 @@ c
       call fphi_to_cphi (fphi,cphi)
 c
 c     increment the field at each multipole site
+c MES : no charge dependence here, dipole terms only
 c
       do i = 1, npole
          field(1,i) = field(1,i) - cphi(2,i)
@@ -1821,7 +1835,7 @@ c
       character*6 mode
       external erfc
 c
-      write(*,*) "Entered udirect2b"
+      write(*,*) "Entered udirect2a"
 c
 c     check for multipoles and set cutoff coefficients
 c
@@ -2332,6 +2346,7 @@ c
       maxlocal = int(dble(npole)*dble(maxelst)/dble(nthread))
 c
 c     perform dynamic allocation of some local arrays
+c MES : fieldt and fieldtp are temp var for field and fieldp
 c
       allocate (toffset(0:nthread-1))
       allocate (pscale(n))
@@ -2528,19 +2543,19 @@ c
                fkmd(3) = zr*(bcn(1)*ci+bcn(2)*dir+bcn(3)*qir)
      &                     - bcn(1)*diz - 2.0d0*bcn(2)*qiz
 c MES : add derivatives here
-               dfimddci(1) = 0.0d0
-               dfimddci(2) = 0.0d0
-               dfimddci(3) = 0.0d0
-               dfimddck(1) = -xr*bcn(1)
-               dfimddck(2) = -yr*bcn(1)
-               dfimddck(3) = -zr*bcn(1)
+c              dfimddci(1) = 0.0d0
+c              dfimddci(2) = 0.0d0
+c              dfimddci(3) = 0.0d0
+c              dfimddck(1) = -xr*bcn(1)
+c              dfimddck(2) = -yr*bcn(1)
+c              dfimddck(3) = -zr*bcn(1)
 
-               dfkmddci(1) = xr*bcn(1)
-               dfkmddci(2) = yr*bcn(1)
-               dfkmddci(3) = zr*bcn(1)
-               dfkmddck(1) = 0.0d0
-               dfkmddck(2) = 0.0d0
-               dfkmddck(3) = 0.0d0
+c              dfkmddci(1) = xr*bcn(1)
+c              dfkmddci(2) = yr*bcn(1)
+c              dfkmddci(3) = zr*bcn(1)
+c              dfkmddck(1) = 0.0d0
+c              dfkmddck(2) = 0.0d0
+c              dfkmddck(3) = 0.0d0
 
                bcn(1) = bn(1) - (1.0d0-scale3*pscale(kk))*rr3
                bcn(2) = bn(2) - 3.0d0*(1.0d0-scale5*pscale(kk))*rr5
@@ -2558,19 +2573,19 @@ c MES : add derivatives here
                fkmp(3) = zr*(bcn(1)*ci+bcn(2)*dir+bcn(3)*qir)
      &                     - bcn(1)*diz - 2.0d0*bcn(2)*qiz
 c MES : add derivatives here
-               dfimpdci(1) = 0.0d0
-               dfimpdci(2) = 0.0d0
-               dfimpdci(3) = 0.0d0
-               dfimpdck(1) = -xr*bcn(1)
-               dfimpdck(2) = -yr*bcn(1)
-               dfimpdck(3) = -zr*bcn(1)
+c              dfimpdci(1) = 0.0d0
+c              dfimpdci(2) = 0.0d0
+c              dfimpdci(3) = 0.0d0
+c              dfimpdck(1) = -xr*bcn(1)
+c              dfimpdck(2) = -yr*bcn(1)
+c              dfimpdck(3) = -zr*bcn(1)
 
-               dfkmpdci(1) = xr*bcn(1)
-               dfkmpdci(2) = yr*bcn(1)
-               dfkmpdci(3) = zr*bcn(1)
-               dfkmpdck(1) = 0.0d0
-               dfkmpdck(2) = 0.0d0
-               dfkmpdck(3) = 0.0d0
+c              dfkmpdci(1) = xr*bcn(1)
+c              dfkmpdci(2) = yr*bcn(1)
+c              dfkmpdci(3) = zr*bcn(1)
+c              dfkmpdck(1) = 0.0d0
+c              dfkmpdck(2) = 0.0d0
+c              dfkmpdck(3) = 0.0d0
 
 c
 c     find terms needed later to compute mutual polarization
@@ -2597,14 +2612,14 @@ c
                   fieldtp(j,i) = fieldtp(j,i) + fimp(j)
                   fieldtp(j,k) = fieldtp(j,k) + fkmp(j)
 c MES : adding derivatives
-c commenting out those with zero increments
+c not combining terms, done below
 c                 dfieldtdci(j,i) = dfieldtdci(j,i) + dfimddci(j)
-                  dfieldtdck(j,i) = dfieldtdck(j,i) + dfimddck(j)
-                  dfieldtdci(j,k) = dfieldtdci(j,k) + dfkmddci(j)
+c                 dfieldtdck(j,i) = dfieldtdck(j,i) + dfimddck(j)
+c                 dfieldtdci(j,k) = dfieldtdci(j,k) + dfkmddci(j)
 c                 dfieldtdck(j,k) = dfieldtdck(j,k) + dfkmddck(j)
 c                 dfieldtpdci(j,i) = dfieldtpdci(j,i) + dfimpdci(j)
-                  dfieldtpdck(j,i) = dfieldtpdck(j,i) + dfimpdck(j)
-                  dfieldtpdci(j,k) = dfieldtpdci(j,k) + dfkmpdci(j)
+c                 dfieldtpdck(j,i) = dfieldtpdck(j,i) + dfimpdck(j)
+c                 dfieldtpdci(j,k) = dfieldtpdci(j,k) + dfkmpdci(j)
 c                 dfieldtpdck(j,k) = dfieldtpdck(j,k) + dfkmpdck(j)
                end do
             end if
@@ -2652,10 +2667,10 @@ c
             fieldp(j,i) = fieldp(j,i) + fieldtp(j,i)
 c MES changed addition order of lines above
 c MES : derivatives ; I think this is correct
-            dfielddci(j,i) = dfielddci(j,i) 
-     &                       + dfieldtdci(j,i) + dfieldtdck(j,i)
-            dfieldpdci(j,i) = dfieldpdci(j,i) 
-     &                        + dfieldtpdci(j,i) + dfieldtpdck(j,i)
+c           dfielddci(j,i) = dfielddci(j,i) 
+c    &                       + dfieldtdci(j,i) + dfieldtdck(j,i)
+c           dfieldpdci(j,i) = dfieldpdci(j,i) 
+c    &                        + dfieldtpdci(j,i) + dfieldtpdck(j,i)
          end do
       end do
 !$OMP END DO
@@ -2767,6 +2782,11 @@ c
      &                      + a(k,3)*uind(3,i)
             fuinp(k,i) = a(k,1)*uinp(1,i) + a(k,2)*uinp(2,i)
      &                      + a(k,3)*uinp(3,i)
+c MES
+c           dfuinddci(k,i) = a(k,1)*duinddci(1,i) + a(k,2)*duinddci(2,i)
+c    &                      + a(k,3)*duinddci(3,i)
+c           dfuinpdci(k,i) = a(k,1)*duinpdci(1,i) + a(k,2)*duinpdci(2,i)
+c    &                      + a(k,3)*duinpdci(3,i)
          end do
       end do
 c
@@ -2783,6 +2803,9 @@ c
                term = qfac(i,j,k)
                qgrid(1,i,j,k) = term * qgrid(1,i,j,k)
                qgrid(2,i,j,k) = term * qgrid(2,i,j,k)
+c MES
+c              dqgdci(1,i,j,k) = term * dqgdci(1,i,j,k)
+c              dqgdci(2,i,j,k) = term * dqgdci(2,i,j,k)
             end do
          end do
       end do
@@ -2809,6 +2832,13 @@ c
             dipfield2(k,i) = a(k,1)*fdip_phi2(2,i)
      &                          + a(k,2)*fdip_phi2(3,i)
      &                          + a(k,3)*fdip_phi2(4,i)
+c MES
+c           ddipfield1dci(k,i) = a(k,1)*dfdip_phi1dci(2,i)
+c    &                          + a(k,2)*dfdip_phi1dci(3,i)
+c    &                          + a(k,3)*dfdip_phi1dci(4,i)
+c           ddipfield2dci(k,i) = a(k,1)*dfdip_phi2dci(2,i)
+c    &                          + a(k,2)*dfdip_phi2dci(3,i)
+c    &                          + a(k,3)*dfdip_phi2dci(4,i)
          end do
       end do
 c
@@ -2818,6 +2848,9 @@ c
          do k = 1, 3
             field(k,i) = field(k,i) - dipfield1(k,i)
             fieldp(k,i) = fieldp(k,i) - dipfield2(k,i)
+c MES
+c           dfielddci(k,i) = dfielddci(k,i) - ddipfield1dci(k,i)
+c           dfieldpdci(k,i) = dfieldpdci(k,i) - ddipfield2dci(k,i)
          end do
       end do
 c
@@ -3247,6 +3280,44 @@ c
      &                + tdipdip(5,m)*uinp(3,i)
          fkmp(3) = tdipdip(3,m)*uinp(1,i) + tdipdip(5,m)*uinp(2,i)
      &                + tdipdip(6,m)*uinp(3,i)
+c MES
+c    some of these might need to be dck instead of dci
+c        dfimddci(1) = tdipdip(1,m)*duinddci(1,k) 
+c    &                + tdipdip(2,m)*duinddci(2,k)
+c    &                + tdipdip(3,m)*duinddci(3,k)
+c        dfimddci(2) = tdipdip(2,m)*duinddci(1,k) 
+c    &                + tdipdip(4,m)*duinddci(2,k)
+c    &                + tdipdip(5,m)*duinddci(3,k)
+c        dfimddci(3) = tdipdip(3,m)*duinddci(1,k) 
+c    &                + tdipdip(5,m)*duinddci(2,k)
+c    &                + tdipdip(6,m)*duinddci(3,k)
+c        dfkmddci(1) = tdipdip(1,m)*duinddci(1,i) 
+c    &                + tdipdip(2,m)*duinddci(2,i)
+c    &                + tdipdip(3,m)*duinddci(3,i)
+c        dfkmddci(2) = tdipdip(2,m)*duinddci(1,i) 
+c    &                + tdipdip(4,m)*duinddci(2,i)
+c    &                + tdipdip(5,m)*duinddci(3,i)
+c        dfkmddci(3) = tdipdip(3,m)*duinddci(1,i) 
+c    &                + tdipdip(5,m)*duinddci(2,i)
+c    &                + tdipdip(6,m)*duinddci(3,i)
+c        dfimpdci(1) = tdipdip(1,m)*duinpdci(1,k) 
+c    &                + tdipdip(2,m)*duinpdci(2,k)
+c    &                + tdipdip(3,m)*duinpdci(3,k)
+c        dfimpdci(2) = tdipdip(2,m)*duinpdci(1,k) 
+c    &                + tdipdip(4,m)*duinpdci(2,k)
+c    &                + tdipdip(5,m)*duinpdci(3,k)
+c        dfimpdci(3) = tdipdip(3,m)*duinpdci(1,k) 
+c    &                + tdipdip(5,m)*duinpdci(2,k)
+c    &                + tdipdip(6,m)*duinpdci(3,k)
+c        dfkmpdci(1) = tdipdip(1,m)*duinpdci(1,i) 
+c    &                + tdipdip(2,m)*duinpdci(2,i)
+c    &                + tdipdip(3,m)*duinpdci(3,i)
+c        dfkmpdci(2) = tdipdip(2,m)*duinpdci(1,i) 
+c    &                + tdipdip(4,m)*duinpdci(2,i)
+c    &                + tdipdip(5,m)*duinpdci(3,i)
+c        dfkmpdci(3) = tdipdip(3,m)*duinpdci(1,i) 
+c    &                + tdipdip(5,m)*duinpdci(2,i)
+c    &                + tdipdip(6,m)*duinpdci(3,i)
 c
 c     increment the field at each site due to this interaction
 c
@@ -3255,6 +3326,11 @@ c
             fieldt(j,k) = fieldt(j,k) + fkmd(j)
             fieldtp(j,i) = fieldtp(j,i) + fimp(j)
             fieldtp(j,k) = fieldtp(j,k) + fkmp(j)
+c MES
+c           dfieldtdci(j,i) = dfieldtdci(j,i) + dfimddci(j)
+c           dfieldtdci(j,k) = dfieldtdci(j,k) + dfkmddci(j)
+c           dfieldtpdci(j,i) = dfieldtpdci(j,i) + dfimpdci(j)
+c           dfieldtpdci(j,k) = dfieldtpdci(j,k) + dfkmpdci(j)
          end do
       end do
 !$OMP END DO
@@ -3266,6 +3342,9 @@ c
          do j = 1, 3
             field(j,i) = fieldt(j,i) + field(j,i)
             fieldp(j,i) = fieldtp(j,i) + fieldp(j,i)
+c MES
+c           dfielddci(j,i) = dfieldtdci(j,i) + dfielddci(j,i)
+c           dfieldpdci(j,i) = dfieldtpdci(j,i) + dfieldpdci(j,i)
          end do
       end do
 !$OMP END DO
