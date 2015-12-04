@@ -4581,12 +4581,16 @@ c
       real*8 zdfield,zufield
       real*8 trq(3),trqi(3)
       real*8 frcx(3),frcy(3),frcz(3)
-      real*8 duixdci,duiydci,duizdci
+      real*8 duindxdci,duindydci,duindzdci
+c     real*8, allocatable :: duinddci(:,:)
+c     real*8, allocatable :: duinpdci(:,:)
 c
       write(*,*) "empole1d"
 c
 c     zero out multipole and polarization energy and derivatives
 c
+      allocate (duinddci(3,npole))
+      allocate (duinpdci(3,npole))
 c     write(*,*) "Are dedci zero?"
       em = 0.0d0
       ep = 0.0d0
@@ -4594,6 +4598,8 @@ c     write(*,*) "Are dedci zero?"
          do j = 1, 3
             dem(j,i) = 0.0d0
             dep(j,i) = 0.0d0
+            duinddci(j,i) = 0.0d0
+            duinpdci(j,i) = 0.0d0
          end do
 c        write (*,*) i," ",dedci(i)
       end do
@@ -4655,6 +4661,7 @@ c     write (*,*) "aewald = ",aewald
      &            + 2.0d0*(qixy*qixy+qixz*qixz+qiyz*qiyz)
          uii = dix*uix + diy*uiy + diz*uiz
          e = fterm * (cii + term*(dii/3.0d0+2.0d0*term*qii/5.0d0))
+c Sagui Eqn 25 self term
          ei = fterm * term * uii / 3.0d0
          em = em + e
          ep = ep + ei
@@ -4662,12 +4669,12 @@ c DCT dE/dci term
          dedci(i) = dedci(i) + 2.0d0*ci*fterm
 c        write(*,*) i,"  dedci(i)    ",dedci(i)
 c MES : adding induced part
-         duixdci = 0.0d0
-         duiydci = 0.0d0
-         duizdci = 0.0d0
+         duindxdci = duinddci(1,i)
+         duindydci = duinddci(2,i)
+         duindzdci = duinddci(3,i)
          depdci(i) = depdci(i) + ( fterm * term / 3.0d0 ) 
-     &              * ( dix * duixdci + diy * duiydci 
-     &                  + diz * duizdci )
+     &              * ( dix * duindxdci + diy * duindydci 
+     &                  + diz * duindzdci )
       end do
 c
 c     compute the self-energy torque term due to induced dipole
@@ -5324,6 +5331,8 @@ c
 c
 c     compute the energy contributions for this interaction
 c       this is Ewald : bn(0) =  erfc/r
+c
+c Sagui Eqn 25 real part
 c
                e = bn(0)*gl(0) + bn(1)*(gl(1)+gl(6))
      &                + bn(2)*(gl(2)+gl(7)+gl(8))
@@ -5985,8 +5994,9 @@ c
       real*8, allocatable :: fphidp(:,:)
       real*8, allocatable :: cphi(:,:)
       real*8, allocatable :: qgrip(:,:,:,:)
-      real*8, allocatable :: dfphidci(:,:)
+c     real*8, allocatable :: dfphidci(:,:)
       real*8, allocatable :: dfuinddci(:,:)
+      real*8, allocatable :: dfuinpdci(:,:)
 c
       write(*,*) "emrecip1"
 c
@@ -6014,15 +6024,14 @@ c
       allocate (fphip(10,npole))
       allocate (fphidp(20,npole))
       allocate (cphi(10,npole))
-      allocate (dfphidci(20,npole))
+      allocate (dfphidci(1,npole))
       allocate (dfuinddci(3,npole))
+      allocate (dfuinpdci(3,npole))
       do i = 1 , npole
+        dfphidci(1,i) = 0.0d0
         do j = 1,3
           dfuinddci(j,i) = 0.0d0
-          dfphidci(j,i) = 0.0d0
-        end do
-        do j = 4,20
-          dfphidci(j,i) = 0.0d0
+          dfuinpdci(j,i) = 0.0d0
         end do
       end do
 c
@@ -6076,6 +6085,8 @@ c        write(*,*) "check 6"
          do i = 1, npole
             do j = 2, 4
                cmp(j,i) = cmp(j,i) + uinp(j-1,i)
+c cmp is a local copy of the perm dipole, then induced is added
+c see above : permanent and induced handled together here
             end do
          end do
          call cmp_to_fmp (cmp,fmp)
@@ -6084,6 +6095,10 @@ c        write(*,*) "check 6"
          do k = 1, nfft3
             do j = 1, nfft2
                do i = 1, nfft1
+c we have the m.p. on the grid from grid_mpole
+c    grids are set up in real space, converted to recip space
+c    so here the grids have already been FT'ed
+c make a copy for the different p-scaling 
                   qgrip(1,i,j,k) = qgrid(1,i,j,k)
                   qgrip(2,i,j,k) = qgrid(2,i,j,k)
                end do
@@ -6094,12 +6109,17 @@ c        write(*,*) "check 6"
                cmp(j,i) = cmp(j,i) + uind(j-1,i) - uinp(j-1,i)
             end do
          end do
+c Sagui Eqn 2.44
          call cmp_to_fmp (cmp,fmp)
          call grid_mpole (fmp)
          call fftfront
+c qgrid zeroed out in grid_mpole each time
+c qgrip for uinp ; qgrid now contains uind
+c     both contain permanent m.p.
          do i = 1, npole
             do j = 2, 4
                cmp(j,i) = cmp(j,i) - uind(j-1,i)
+c MES : induced part removed here
             end do
          end do
       else
@@ -6151,6 +6171,7 @@ c volterm = pi*volume electric = 1/(4pi eps0)
 c   it looks like qgrid(1,k1,k2,k3) = qgrip(1,k1,k2,k3)
 c   and qgrid(1,k1,k2,k3) ne qgrid(2,k1,k2,k3) 
          if (term .gt. -50.0d0) then
+c MES usually executed, I think
             denom = volterm*hsq*bsmod1(k1)*bsmod2(k2)*bsmod3(k3)
             expterm = exp(term) / denom
             if (.not. use_bounds) then
@@ -6158,8 +6179,12 @@ c   and qgrid(1,k1,k2,k3) ne qgrid(2,k1,k2,k3)
             else if (octahedron) then
                if (mod(m1+m2+m3,2) .ne. 0)  expterm = 0.0d0
             end if
+c Sagui Eqn 2.45 
             struc2 = qgrid(1,k1,k2,k3)*qgrip(1,k1,k2,k3)
      &                  + qgrid(2,k1,k2,k3)*qgrip(2,k1,k2,k3)
+c Lagardere Eqn 8 ; Sagui Eqn 2.48
+c MES need d(struct)dci ==> qgrid and qgrip derivs wrt ci
+c    but what is this eterm used for??
             eterm = 0.5d0 * electric * expterm * struc2
             vterm = (2.0d0/hsq) * (1.0d0-term) * eterm
             vxx = vxx + h1*h1*vterm - eterm
@@ -6174,6 +6199,11 @@ c   and qgrid(1,k1,k2,k3) ne qgrid(2,k1,k2,k3)
 c
 c     assign just the induced multipoles to PME grid
 c     and perform the 3-D FFT forward transformation
+c
+c
+c
+c xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+c below not used
 c
       if (use_polar .and. poltyp.eq.'DIRECT') then
 c        write (*,*) "poltyp is DIRECT and use_polar T"
@@ -6261,6 +6291,10 @@ c
          end do
       end if
 c
+c above not used
+c xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+c
+c
 c     perform deallocation of some local arrays
 c
       deallocate (qgrip)
@@ -6302,6 +6336,8 @@ c
 c     perform 3-D FFT backward transform and get potential
 c
       call fftback
+c MES
+c     call fphi_mpole (fphi)
       call fphi_mpole (fphi)
       do i = 1, npole
          do j = 1, 20
@@ -6313,14 +6349,17 @@ c
 
 c
 c     increment the permanent multipole energy and gradient
+c here fphi is the recip ESP at an atomic site i
+c      em is recip energy, which is added to direct and self later
 c
       e = 0.0d0
-c DCT this is the only contribution to dE/dcharge ?
       do i = 1, npole
          f1 = 0.0d0
          f2 = 0.0d0
          f3 = 0.0d0
-         dedci(i) = dedci(i) + fphi(1,i) 
+c DCT
+c        dedci(i) = dedci(i) + fphi(1,i) 
+         dedci(i) = dedci(i) + fphi(1,i) + fmp(1,i)*dfphidci(1,i)
          write(*,*) i,"  dedci(i)    ",dedci(i)
          do k = 1, 10
             e = e + fmp(k,i)*fphi(k,i)
@@ -6408,17 +6447,18 @@ c        write(*,*) "check 10"
          end do
          do i = 1, npole
             do j = 1, 3
+c fuind, fuinp = induced dipole in fractional coord
                fuind(j,i) = a(j,1)*uind(1,i) + a(j,2)*uind(2,i)
      &                          + a(j,3)*uind(3,i)
                fuinp(j,i) = a(j,1)*uinp(1,i) + a(j,2)*uinp(2,i)
      &                          + a(j,3)*uinp(3,i)
 c MES
-c              dfuinddci(j,i) = a(j,1)*duinddci(1,i) 
-c    &                          + a(j,2)*duinddci(2,i)
-c    &                          + a(j,3)*duinddci(3,i)
-c              dfuinpdci(j,i) = a(j,1)*duinpdci(1,i) 
-c    &                          + a(j,2)*duinpdci(2,i)
-c    &                          + a(j,3)*duinpdci(3,i)
+               dfuinddci(j,i) = a(j,1)*duinddci(1,i) 
+     &                          + a(j,2)*duinddci(2,i)
+     &                          + a(j,3)*duinddci(3,i)
+               dfuinpdci(j,i) = a(j,1)*duinpdci(1,i) 
+     &                          + a(j,2)*duinpdci(2,i)
+     &                          + a(j,3)*duinpdci(3,i)
             end do
          end do
 c
@@ -6492,8 +6532,9 @@ c           write(*,*) "i ",i," fmp ",fmp(1,i),"    cmp ",cmp(1,i)
                j1 = deriv1(k+1)
                j2 = deriv2(k+1)
                j3 = deriv3(k+1)
+c Sagui Eqn 2.9 recip part with only induced dipole part
                e = e + fuind(k,i)*fphi(k+1,i)
-C MES 
+c MES 
                detdci = detdci + dfuinddci(k,i)*fphi(k+1,i)
      &                       + fuind(k,i)*dfphidci(k+1,i)
                detdci = 0.5*detdci

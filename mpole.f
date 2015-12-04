@@ -44,6 +44,9 @@ c add DCT variable, charge before CT
 c add DCT variable, dE/dcharge_i
       real*8, allocatable :: dedci(:)
       real*8, allocatable :: depdci(:)
+      real*8, allocatable :: duinddci(:,:)
+      real*8, allocatable :: duinpdci(:,:)
+      real*8, allocatable :: dfphidci(:,:)
       character*8, allocatable :: polaxe(:)
       save
       end

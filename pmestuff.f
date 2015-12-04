@@ -820,10 +820,15 @@ c
       real*8 tuv101,tuv011,tuv300,tuv030
       real*8 tuv003,tuv210,tuv201,tuv120
       real*8 tuv021,tuv102,tuv012,tuv111
+      real*8 dtuv000dqg
+      real*8, allocatable :: dfphidqg(:,:)
       real*8 fphi(20,*)
 c
       write(*,*) "Entered fphi_mpole"
       write(*,*) "bsorder = ",bsorder
+
+      allocate (dfphidqg(1,npole))
+
 c
 c     set OpenMP directives for the major loop structure
 c
@@ -834,6 +839,7 @@ c
 c     extract the permanent multipole field at each site
 c
       do isite = 1, npole
+         dfphidqg(1,isite) = 0.0d0
          iatm = ipole(isite)
          igrd0 = igrid(1,iatm)
          jgrd0 = igrid(2,iatm)
@@ -941,6 +947,8 @@ c        mpole of atom/isite calc from grid
 c        dtuv000dqg = thetai1(1,it1,iatm)*thetai2(1,it2,iatm)
 c    &                     *thetai3(1,it3,iatm)
 c        dfphidqg(1,isite) = dtuv000dqg
+c MES I think the following still needs to be modified
+c        dfphidci(1,isite) = dfphidqg(1,isite)
          fphi(2,isite) = tuv100
          fphi(3,isite) = tuv010
          fphi(4,isite) = tuv001
@@ -967,6 +975,9 @@ c     end OpenMP directive for the major loop structure
 c
 !$OMP END DO
 !$OMP END PARALLEL
+
+      deallocate (dfphidqg)
+
       return
       end
 c     end of fphi_mpole

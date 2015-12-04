@@ -258,6 +258,7 @@ c
       if (n .gt. 1) then
          iw = n + n + 1
          call cfftb1 (n,c,wsave,wsave(iw),ifac)
+c c = work = qgrid
       end if
       return
       end

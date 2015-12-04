@@ -626,7 +626,7 @@ c check if water with oxygen atom j donates hydrogen bond to i
 
 c                          write(*,*) xna,dxna,rr
 
-c dE/dq
+c dE/dq * dq/dr
                            dem(1,i) = dem(1,i)
      & +(dedci(i)*zdqt(1,3)+dedci(i+1)*zdqt(2,3)
      & +dedci(i+2)*zdqt(3,3))*dxna*xr/rr
@@ -720,39 +720,76 @@ c ect here only (not above) to avoid double counting
      & +0.5d0*etact*(xna*dqt)**2
 
 c dE/dq + dE_ct/dr
+c                          dem(1,i+l) = dem(1,i+l)
+c    & +(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
+c    & +dedci(i+2)*zdqt(3,l+1))*dxna*xr/rr
+c                          dem(1,i+l) = dem(1,i+l)
+c    & +((muct+etact*xna*dqt)*dqt
+c    & )*dxna*xr/rr
+c                          dem(2,i+l) = dem(2,i+l)
+c    & +(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
+c    & +dedci(i+2)*zdqt(3,l+1))*dxna*yr/rr
+c                          dem(2,i+l) = dem(2,i+l)
+c    & +((muct+etact*xna*dqt)*dqt
+c    & )*dxna*yr/rr
+c                          dem(3,i+l) = dem(3,i+l)
+c    & +(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
+c    & +dedci(i+2)*zdqt(3,l+1))*dxna*zr/rr
+c                          dem(3,i+l) = dem(3,i+l)
+c    & +((muct+etact*xna*dqt)*dqt
+c    & )*dxna*zr/rr
+c                          dem(1,j) = dem(1,j)
+c    & -(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
+c    & +dedci(i+2)*zdqt(3,l+1))*dxna*xr/rr
+c                          dem(1,j) = dem(1,j)
+c    & -((muct+etact*xna*dqt)*dqt
+c    & )*dxna*xr/rr
+c                          dem(2,j) = dem(2,j)
+c    & -(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
+c    & +dedci(i+2)*zdqt(3,l+1))*dxna*yr/rr
+c                          dem(2,j) = dem(2,j)
+c    & -((muct+etact*xna*dqt)*dqt
+c    & )*dxna*yr/rr
+c                          dem(3,j) = dem(3,j)
+c    & -(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
+c    & +dedci(i+2)*zdqt(3,l+1))*dxna*zr/rr
+c                          dem(3,j) = dem(3,j)
+c    & -((muct+etact*xna*dqt)*dqt
+c    & )*dxna*zr/rr
+
                            dem(1,i+l) = dem(1,i+l)
-     & +(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
-     & +dedci(i+2)*zdqt(3,l+1))*dxna*xr/rr
+     & +(dedci(i)*zdqt(1,l)+dedci(i+1)*zdqt(2,l)
+     & +dedci(i+2)*zdqt(3,l))*dxna*xr/rr
                            dem(1,i+l) = dem(1,i+l)
      & +((muct+etact*xna*dqt)*dqt
      & )*dxna*xr/rr
                            dem(2,i+l) = dem(2,i+l)
-     & +(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
-     & +dedci(i+2)*zdqt(3,l+1))*dxna*yr/rr
+     & +(dedci(i)*zdqt(1,l)+dedci(i+1)*zdqt(2,l)
+     & +dedci(i+2)*zdqt(3,l))*dxna*yr/rr
                            dem(2,i+l) = dem(2,i+l)
      & +((muct+etact*xna*dqt)*dqt
      & )*dxna*yr/rr
                            dem(3,i+l) = dem(3,i+l)
-     & +(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
-     & +dedci(i+2)*zdqt(3,l+1))*dxna*zr/rr
+     & +(dedci(i)*zdqt(1,l)+dedci(i+1)*zdqt(2,l)
+     & +dedci(i+2)*zdqt(3,l))*dxna*zr/rr
                            dem(3,i+l) = dem(3,i+l)
      & +((muct+etact*xna*dqt)*dqt
      & )*dxna*zr/rr
                            dem(1,j) = dem(1,j)
-     & -(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
-     & +dedci(i+2)*zdqt(3,l+1))*dxna*xr/rr
+     & -(dedci(i)*zdqt(1,l)+dedci(i+1)*zdqt(2,l)
+     & +dedci(i+2)*zdqt(3,l))*dxna*xr/rr
                            dem(1,j) = dem(1,j)
      & -((muct+etact*xna*dqt)*dqt
      & )*dxna*xr/rr
                            dem(2,j) = dem(2,j)
-     & -(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
-     & +dedci(i+2)*zdqt(3,l+1))*dxna*yr/rr
+     & -(dedci(i)*zdqt(1,l)+dedci(i+1)*zdqt(2,l)
+     & +dedci(i+2)*zdqt(3,l))*dxna*yr/rr
                            dem(2,j) = dem(2,j)
      & -((muct+etact*xna*dqt)*dqt
      & )*dxna*yr/rr
                            dem(3,j) = dem(3,j)
-     & -(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
-     & +dedci(i+2)*zdqt(3,l+1))*dxna*zr/rr
+     & -(dedci(i)*zdqt(1,l)+dedci(i+1)*zdqt(2,l)
+     & +dedci(i+2)*zdqt(3,l))*dxna*zr/rr
                            dem(3,j) = dem(3,j)
      & -((muct+etact*xna*dqt)*dqt
      & )*dxna*zr/rr

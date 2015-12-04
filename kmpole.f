@@ -419,8 +419,7 @@ c
          end do
   140    continue
 c DCT
-c MES : commented out for debug
-       rpole0(i) = pole(1,i)
+        rpole0(i) = pole(1,i)
       end do
 c
 c     perform deallocation of some local arrays
