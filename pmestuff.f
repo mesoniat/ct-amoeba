@@ -512,6 +512,8 @@ c
             do i = 1, nfft1
                qgrid(1,i,j,k) = 0.0d0
                qgrid(2,i,j,k) = 0.0d0
+               dqgrdci(1,i,j,k) = 0.0d0
+               dqgrdci(2,i,j,k) = 0.0d0
             end do
          end do
       end do
@@ -582,8 +584,11 @@ c
                         t2 = thetai1(3,m,iatm)
                         qgrid(1,i,j,k) = qgrid(1,i,j,k) + term0*t0
      &                                      + term1*t1 + term2*t2
-c MES
-c                       dqgdci(1,i,j,k) = dqgdci(1,i,j,k) + u0*v0*t0
+c MES    dfmpdci = 1
+                        dqgrdci(1,i,j,k) = dqgrdci(1,i,j,k) 
+     &                       + u0*v0*t0
+c this is being updated properly
+c                       write(*,*) i,j,k,dqgrdci(1,i,j,k)
                      end do
                   end do
                end do
@@ -820,20 +825,25 @@ c
       real*8 tuv101,tuv011,tuv300,tuv030
       real*8 tuv003,tuv210,tuv201,tuv120
       real*8 tuv021,tuv102,tuv012,tuv111
-      real*8 dtuv000dqg
+      real*8 dtuv000dqg,dt0,dtu00, dtuv000
       real*8, allocatable :: dfphidqg(:,:)
+      real*8 dfphitemp
       real*8 fphi(20,*)
 c
       write(*,*) "Entered fphi_mpole"
       write(*,*) "bsorder = ",bsorder
 
       allocate (dfphidqg(1,npole))
+      dfphitemp = 0.0d0
+      write(*,*) "dtuv000, dtu00, dt0"
 
 c
 c     set OpenMP directives for the major loop structure
 c
+c MES added dqgrdci and dfphidci to OMP shared var.
 !$OMP PARALLEL default(private) shared(npole,ipole,igrid,bsorder,
-!$OMP& nfft3,thetai3,nfft2,thetai2,nfft1,thetai1,qgrid,fphi)
+!$OMP& nfft3,thetai3,nfft2,thetai2,nfft1,thetai1,qgrid,fphi,
+!$OMP& dqgrdci,dfphidci,dfphitemp)
 !$OMP DO
 c
 c     extract the permanent multipole field at each site
@@ -893,6 +903,7 @@ c        write(*,*) "isite ",isite,"   iatm ",iatm,"   igrd0 ",igrd0
                u2 = thetai2(3,it2,iatm)
                u3 = thetai2(4,it2,iatm)
                t0 = 0.0d0
+               dt0 = 0.0d0
                t1 = 0.0d0
                t2 = 0.0d0
                t3 = 0.0d0
@@ -902,12 +913,15 @@ c        write(*,*) "isite ",isite,"   iatm ",iatm,"   igrd0 ",igrd0
                   i = i0 + 1 + (nfft1-isign(nfft1,i0))/2
                   tq = qgrid(1,i,j,k)
                   t0 = t0 + tq*thetai1(1,it1,iatm)
+                  dt0 = dt0 + thetai1(1,it1,iatm)*dqgrdci(1,i,j,k)
+c                 write(*,*) i,j,k,dqgrdci(1,i,j,k)
                   t1 = t1 + tq*thetai1(2,it1,iatm)
                   t2 = t2 + tq*thetai1(3,it1,iatm)
                   t3 = t3 + tq*thetai1(4,it1,iatm)
                end do
 c              end of it1
                tu00 = tu00 + t0*u0
+               dtu00 = dtu00 + dt0*u0
                tu10 = tu10 + t1*u0
                tu01 = tu01 + t0*u1
                tu20 = tu20 + t2*u0
@@ -920,6 +934,7 @@ c              end of it1
             end do
 c           end of it2
             tuv000 = tuv000 + tu00*v0
+            dtuv000 = dtuv000 + dtu00*v0
             tuv100 = tuv100 + tu10*v0
             tuv010 = tuv010 + tu01*v0
             tuv001 = tuv001 + tu00*v1
@@ -944,11 +959,9 @@ c        end of it3
 c
 c        mpole of atom/isite calc from grid
          fphi(1,isite) = tuv000
-c        dtuv000dqg = thetai1(1,it1,iatm)*thetai2(1,it2,iatm)
-c    &                     *thetai3(1,it3,iatm)
-c        dfphidqg(1,isite) = dtuv000dqg
-c MES I think the following still needs to be modified
-c        dfphidci(1,isite) = dfphidqg(1,isite)
+         dfphidqg(1,isite) = dtuv000
+c MES 
+         dfphidci(1,isite) = dfphidqg(1,isite)
          fphi(2,isite) = tuv100
          fphi(3,isite) = tuv010
          fphi(4,isite) = tuv001
@@ -968,6 +981,9 @@ c        dfphidci(1,isite) = dfphidqg(1,isite)
          fphi(18,isite) = tuv102
          fphi(19,isite) = tuv012
          fphi(20,isite) = tuv111
+         dfphitemp = dfphitemp + dfphidci(1,isite)
+c        write(*,*) tuv000,tu00,t0
+c        write(*,*) dtuv000,dtu00,dt0
       end do
 c     end of isite
 c
@@ -976,6 +992,7 @@ c
 !$OMP END DO
 !$OMP END PARALLEL
 
+      write(*,*) "dfphitemp = ",dfphitemp
       deallocate (dfphidqg)
 
       return

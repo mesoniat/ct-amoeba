@@ -2864,7 +2864,7 @@ c
       character*6 mode
       external erfc
 c
-      write(*,*) "ereal1d"
+      write(*,*) "ereal1c"
 c
 c     zero out the intramolecular portion of the Ewald energy
 c
@@ -4591,7 +4591,7 @@ c     zero out multipole and polarization energy and derivatives
 c
       allocate (duinddci(3,npole))
       allocate (duinpdci(3,npole))
-c     write(*,*) "Are dedci zero?"
+      write(*,*) "Are dedci zero?"
       em = 0.0d0
       ep = 0.0d0
       do i = 1, n
@@ -4601,7 +4601,7 @@ c     write(*,*) "Are dedci zero?"
             duinddci(j,i) = 0.0d0
             duinpdci(j,i) = 0.0d0
          end do
-c        write (*,*) i," ",dedci(i)
+         write (*,*) i," ",dedci(i)
       end do
       if (npole .eq. 0)  return
 c
@@ -4666,8 +4666,9 @@ c Sagui Eqn 25 self term
          em = em + e
          ep = ep + ei
 c DCT dE/dci term
+         write(*,*) i,"  dedci(i)    ",dedci(i)
          dedci(i) = dedci(i) + 2.0d0*ci*fterm
-c        write(*,*) i,"  dedci(i)    ",dedci(i)
+         write(*,*) i,"  dedci(i)    ",dedci(i)
 c MES : adding induced part
          duindxdci = duinddci(1,i)
          duindydci = duinddci(2,i)
@@ -4940,6 +4941,7 @@ c
          pscale(i) = 1.0d0
          dscale(i) = 1.0d0
          uscale(i) = 1.0d0
+         write(*,*) i,"  dedci(i)    ",dedci(i)
       end do
 c
 c     set conversion factor, cutoff and switching coefficients
@@ -4992,6 +4994,7 @@ c
 !$OMP& schedule(guided)
 c
 c MES : need to add dedci and depdci to above OMP list?
+c    No. Default is shared.
 c
 c     compute the real space portion of the Ewald summation
 c
@@ -5055,6 +5058,7 @@ c
          do kkk = 1, nelst(i)
             k = elst(kkk,i)
             kk = ipole(k)
+c           write(*,*) kkk,k,kk
             xr = x(kk) - x(ii)
             yr = y(kk) - y(ii)
             zr = z(kk) - z(ii)
@@ -5077,6 +5081,7 @@ c
                qk(9) = rpole(13,k)
 c
 c     calculate the real space error function terms
+c bn(j) ==> damped T matrix terms
 c
                ralpha = aewald * r
                bn(0) = erfc(ralpha) / r
@@ -5141,8 +5146,6 @@ c
 c
 c     construct necessary auxiliary vectors
 c
-c MES : need to add DCT-related vectors?
-c     where are these used?
                dixdk(1) = di(2)*dk(3) - di(3)*dk(2)
                dixdk(2) = di(3)*dk(1) - di(1)*dk(3)
                dixdk(3) = di(1)*dk(2) - di(2)*dk(1)
@@ -5158,6 +5161,7 @@ c     where are these used?
                dkxuip(1) = dk(2)*uinp(3,i) - dk(3)*uinp(2,i)
                dkxuip(2) = dk(3)*uinp(1,i) - dk(1)*uinp(3,i)
                dkxuip(3) = dk(1)*uinp(2,i) - dk(2)*uinp(1,i)
+c MES need d(uind)dphi and d(uinp)dphi times dphidci or dphidck
                dixr(1) = di(2)*zr - di(3)*yr
                dixr(2) = di(3)*xr - di(1)*zr
                dixr(3) = di(1)*yr - di(2)*xr
@@ -5227,6 +5231,7 @@ c     where are these used?
      &                       + qk(8)*uinp(3,i)
                qkuip(3) = qk(3)*uinp(1,i) + qk(6)*uinp(2,i)
      &                       + qk(9)*uinp(3,i)
+c MES need d(uind)dphi and d(uinp)dphi times dphidci or dphidck
                dixqkr(1) = di(2)*qkr(3) - di(3)*qkr(2)
                dixqkr(2) = di(3)*qkr(1) - di(1)*qkr(3)
                dixqkr(3) = di(1)*qkr(2) - di(2)*qkr(1)
@@ -5245,6 +5250,7 @@ c     where are these used?
                ukxqirp(1) = uinp(2,k)*qir(3) - uinp(3,k)*qir(2)
                ukxqirp(2) = uinp(3,k)*qir(1) - uinp(1,k)*qir(3)
                ukxqirp(3) = uinp(1,k)*qir(2) - uinp(2,k)*qir(1)
+c MES need d(uind)dphi and d(uinp)dphi times dphidci or dphidck
                rxqidk(1) = yr*qidk(3) - zr*qidk(2)
                rxqidk(2) = zr*qidk(1) - xr*qidk(3)
                rxqidk(3) = xr*qidk(2) - yr*qidk(1)
@@ -5266,6 +5272,8 @@ c     where are these used?
 c
 c     calculate the scalar products for permanent components
 c
+c MES there are no charge terms here
+c    should there be for CT??
                sc(2) = di(1)*dk(1) + di(2)*dk(2) + di(3)*dk(3)
                sc(3) = di(1)*xr + di(2)*yr + di(3)*zr
                sc(4) = dk(1)*xr + dk(2)*yr + dk(3)*zr
@@ -5280,6 +5288,7 @@ c
 c
 c     calculate the scalar products for induced components
 c
+c MES will need derivatives here
                sci(1) = uind(1,i)*dk(1) + uind(2,i)*dk(2)
      &                     + uind(3,i)*dk(3) + di(1)*uind(1,k)
      &                     + di(2)*uind(2,k) + di(3)*uind(3,k)
@@ -5332,7 +5341,6 @@ c
 c     compute the energy contributions for this interaction
 c       this is Ewald : bn(0) =  erfc/r
 c
-c Sagui Eqn 25 real part
 c
                e = bn(0)*gl(0) + bn(1)*(gl(1)+gl(6))
      &                + bn(2)*(gl(2)+gl(7)+gl(8))
@@ -5358,18 +5366,20 @@ c
 
 c DCT energy derivatives dE/dqi
 c    includes e, ei, erl, erli
-c MES : need to add more terms below? for screened and unscreened int
-               dedci(i) = dedci(i) + f*(bn(0)*ck + bn(1)*(-sc(4))
+               dedci(i) = dedci(i) 
+     & + f*(bn(0)*ck + bn(1)*(-sc(4))
      & + bn(2)*sc(6) + 0.5d0*bn(1)*(-sci(4))) 
-               depdci(i) = depdci(i) - f*(
-     & + (rr1*ck+rr3*(-sc(4))+rr5*sc(6))*(1.0d0-mscale(kk)) 
+               depdci(i) = depdci(i) 
+     & - f*((rr1*ck+rr3*(-sc(4))+rr5*sc(6))*(1.0d0-mscale(kk)) 
      & + 0.5d0*rr3*(-sci(4))*psc3 )
-               dedci(k) = dedci(k) + f*(bn(0)*ci + bn(1)*(sc(3))
+               dedci(k) = dedci(k) 
+     & + f*(bn(0)*ci + bn(1)*(sc(3))
      & + bn(2)*sc(5) + 0.5d0*bn(1)*(sci(3)))
-               depdci(i) = depdci(i) - f*(
-     & + (rr1*ci+rr3*(sc(3))+rr5*sc(5))*(1.0d0-mscale(kk)) 
+               depdci(k) = depdci(k) 
+     & - f*((rr1*ci+rr3*(sc(3))+rr5*sc(5))*(1.0d0-mscale(kk)) 
      & + 0.5d0*rr3*(sci(3))*psc3 )
-c                write(*,*) i,"  dedci(i)    ",dedci(i)
+               write(*,*) i,"  dedci(i)    ",dedci(i)
+               write(*,*) k,"  dedci(k)    ",dedci(k)
 
 c
 c     increment the total intramolecular energy; assumes
@@ -5382,7 +5392,11 @@ c
      &                         * (rr3*(gli(1)+gli(6))*scale3
      &                              + rr5*(gli(2)+gli(7))*scale5
      &                              + rr7*gli(3)*scale7)
-c MES : need deriv.s here?
+c MES : need induced deriv. also
+c    need dedci(k) too ??
+                  deintradci = deintradci + mscale(kk)*f
+     &                          *(rr1*ck - rr3*sc(4) + rr5*sc(6))
+c                 dedci(i) = dedci(i) - deintradci
                end if
 c
 c     set flags to compute components without screening
@@ -5896,6 +5910,8 @@ c
             dem(j,i) = dem(j,i) + demo1(j,i) + demo2(j,i)
             dep(j,i) = dep(j,i) + depo1(j,i) + depo2(j,i)
          end do
+c        dedci(i) = dedci(i) 
+c        depdci(i) = depdci(i)
       end do
       do i = 1, 3
          do j = 1, 3
@@ -5994,7 +6010,6 @@ c
       real*8, allocatable :: fphidp(:,:)
       real*8, allocatable :: cphi(:,:)
       real*8, allocatable :: qgrip(:,:,:,:)
-c     real*8, allocatable :: dfphidci(:,:)
       real*8, allocatable :: dfuinddci(:,:)
       real*8, allocatable :: dfuinpdci(:,:)
 c
@@ -6025,14 +6040,18 @@ c
       allocate (fphidp(20,npole))
       allocate (cphi(10,npole))
       allocate (dfphidci(1,npole))
+      allocate (dqgrdci(2,nfft1,nfft2,nfft3))
+      allocate (dqgrpci(2,nfft1,nfft2,nfft3))
       allocate (dfuinddci(3,npole))
       allocate (dfuinpdci(3,npole))
+
       do i = 1 , npole
         dfphidci(1,i) = 0.0d0
         do j = 1,3
           dfuinddci(j,i) = 0.0d0
           dfuinpdci(j,i) = 0.0d0
         end do
+        write(*,*) i,"  dedci(i)    ",dedci(i)
       end do
 c
 c     zero out the temporary virial accumulation variables
@@ -6101,6 +6120,8 @@ c    so here the grids have already been FT'ed
 c make a copy for the different p-scaling 
                   qgrip(1,i,j,k) = qgrid(1,i,j,k)
                   qgrip(2,i,j,k) = qgrid(2,i,j,k)
+                  dqgrpci(1,i,j,k) = dqgrdci(1,i,j,k)
+                  dqgrpci(2,i,j,k) = dqgrdci(2,i,j,k)
                end do
             end do
          end do
@@ -6133,6 +6154,8 @@ c        write(*,*) "check 7"
                do i = 1, nfft1
                   qgrip(1,i,j,k) = qgrid(1,i,j,k)
                   qgrip(2,i,j,k) = qgrid(2,i,j,k)
+                  dqgrpci(1,i,j,k) = dqgrdci(1,i,j,k)
+                  dqgrpci(2,i,j,k) = dqgrdci(2,i,j,k)
                end do
             end do
          end do
@@ -6344,6 +6367,7 @@ c     call fphi_mpole (fphi)
             fphi(j,i) = electric * fphi(j,i)
          end do
          write(*,*) i," fphi ",fphi(1,i)
+         dfphidci(1,i) = electric*dfphidci(1,i)
       end do
       call fphi_to_cphi (fphi,cphi)
 
@@ -6359,7 +6383,8 @@ c
          f3 = 0.0d0
 c DCT
 c        dedci(i) = dedci(i) + fphi(1,i) 
-         dedci(i) = dedci(i) + fphi(1,i) + fmp(1,i)*dfphidci(1,i)
+         dedci(i) = dedci(i) 
+     &              + 0.5d0*(fphi(1,i) + fmp(1,i)*dfphidci(1,i))
          write(*,*) i,"  dedci(i)    ",dedci(i)
          do k = 1, 10
             e = e + fmp(k,i)*fphi(k,i)
@@ -6708,7 +6733,9 @@ c
       deallocate (fphip)
       deallocate (fphidp)
       deallocate (dfuinddci)
-      deallocate (dfphidci)
+c MES : dealloc causes seg fault in pmestuff.f
+c     deallocate (dfphidci)
+c     deallocate (dqgrdci)
       deallocate (cphi)
       return
       end

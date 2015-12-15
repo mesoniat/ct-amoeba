@@ -243,11 +243,7 @@ c
       write(*,*) "Calling newcrg"
 c DCT gets new charges from current geometry
       if (use_crgtr) call newcrg
-  
-c     write(*,*) "New charges, no empole yet"
-c     do i = 1, n
-c        write(*,*) i,dem(1,i),dem(2,i),dem(3,i)
-c     end do
+c no empole yet --> dem = 0  
 
       if (use_charge)  call echarge1
       if (use_chgdpl)  call echgdpl1
@@ -262,19 +258,19 @@ c
       if (use_geom)  call egeom1
       if (use_extra)  call extra1
 
-c     write(*,*) "empole done"
-c     do i = 1, n
-c        write(*,*) i,dem(1,i),dem(2,i),dem(3,i)
-c     end do
+      write(*,*) "empole done : dem(i) :"
+      do i = 1, n
+         write(*,*) dem(1,i),dem(2,i),dem(3,i)
+      end do
 
 c DCT gets charge transfer contribution to forces
 c        and adds charge transfer energy to em
       if (use_crgtr) call ect1
 
-c     write(*,*) "Final, after CT"
-c     do i = 1, n
-c        write(*,*) i,dem(1,i),dem(2,i),dem(3,i)
-c     end do
+      write(*,*) "Final dem, after CT"
+      do i = 1, n
+         write(*,*) dem(1,i),dem(2,i),dem(3,i)
+      end do
 
 c
 c     sum up to get the total energy and first derivatives
@@ -361,6 +357,13 @@ c
 
       write(*,*) "newcrg subroutine"
       write(*,*) "use_grad = ",use_grad
+
+      if(n.le.6) then
+      write(*,*) "Original charges : "
+        do i=1,n
+          write(*,*) i," ",rpole0(i)
+        enddo
+      endif
 
 c  charge transfer matrix
 c  zdqt(i,j) charge transfered to atom i due to hydrogen
@@ -492,8 +495,7 @@ c hydrogen charges
       if(n.le.6) then
       write(*,*) "New charges : "
         do i=1,n
-          pole(1,i) = rpole(1,i)
-          write(*,*) i," ",pole(1,i)
+          write(*,*) i," ",rpole(1,i)
         enddo
       endif
 
@@ -564,7 +566,7 @@ c dedci already calculated, does not change within this routine
       if(n.le.6) then
 c       write(*,*) "Pre-CT: dem_x, dem_y, dem_z"
         do i=1,n
-c         write(*,*) dedci(i)
+          write(*,*) dedci(i)
 c         dedci(i) = 0.0d0
 c         write(*,*) dem(1,i),dem(2,i),dem(3,i) 
         enddo
@@ -627,6 +629,7 @@ c check if water with oxygen atom j donates hydrogen bond to i
 c                          write(*,*) xna,dxna,rr
 
 c dE/dq * dq/dr
+c MES : This only affects the oxygens!
                            dem(1,i) = dem(1,i)
      & +(dedci(i)*zdqt(1,3)+dedci(i+1)*zdqt(2,3)
      & +dedci(i+2)*zdqt(3,3))*dxna*xr/rr
@@ -877,12 +880,12 @@ c check virial
       write(*,*) "Ect = ",ect
       em = em + ect
 
-      if(n.le.6) then
+c     if(n.le.6) then
 c       write(*,*) "Post-CT: dem_x, dem_y, dem_z"
-        do i=1,n
+c       do i=1,n
 c         write(*,*) dem(1,i),dem(2,i),dem(3,i)
-        enddo
-      endif
+c       enddo
+c     endif
 
 c     deallocate (nacti(n))
 c     deallocate (ndcti(n))
