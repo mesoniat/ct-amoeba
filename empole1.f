@@ -6382,7 +6382,11 @@ c
          f2 = 0.0d0
          f3 = 0.0d0
 c DCT
+c    only occurence of dedci within emrecip1
+c    cphi = fphi ; cmp = fmp for monopoles
 c        dedci(i) = dedci(i) + fphi(1,i) 
+         write(*,*) fmp(1,i),fphi(1,i),dfphidci(1,i)
+c        write(*,*) cmp(1,i),cphi(1,i)
          dedci(i) = dedci(i) 
      &              + 0.5d0*(fphi(1,i) + fmp(1,i)*dfphidci(1,i))
          write(*,*) i,"  dedci(i)    ",dedci(i)

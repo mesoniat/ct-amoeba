@@ -835,7 +835,8 @@ c
 
       allocate (dfphidqg(1,npole))
       dfphitemp = 0.0d0
-      write(*,*) "dtuv000, dtu00, dt0"
+c     write(*,*) "dtuv000, dtu00, dt0"
+c     write(*,*) "isite    dtuv000"
 
 c
 c     set OpenMP directives for the major loop structure
@@ -857,6 +858,7 @@ c
 c        location of isite on grid
 c        write(*,*) "isite ",isite,"   iatm ",iatm,"   igrd0 ",igrd0
          tuv000 = 0.0d0
+         dtuv000 = 0.0d0
          tuv001 = 0.0d0
          tuv010 = 0.0d0
          tuv100 = 0.0d0
@@ -885,6 +887,7 @@ c        write(*,*) "isite ",isite,"   iatm ",iatm,"   igrd0 ",igrd0
             v2 = thetai3(3,it3,iatm)
             v3 = thetai3(4,it3,iatm)
             tu00 = 0.0d0
+            dtu00 = 0.0d0
             tu10 = 0.0d0
             tu01 = 0.0d0
             tu20 = 0.0d0
@@ -962,6 +965,7 @@ c        mpole of atom/isite calc from grid
          dfphidqg(1,isite) = dtuv000
 c MES 
          dfphidci(1,isite) = dfphidqg(1,isite)
+c        write(*,*) isite,dfphidqg(1,isite),dfphidci(1,isite)
          fphi(2,isite) = tuv100
          fphi(3,isite) = tuv010
          fphi(4,isite) = tuv001
@@ -992,7 +996,7 @@ c
 !$OMP END DO
 !$OMP END PARALLEL
 
-      write(*,*) "dfphitemp = ",dfphitemp
+c     write(*,*) "dfphitemp = ",dfphitemp
       deallocate (dfphidqg)
 
       return

@@ -629,7 +629,7 @@ c check if water with oxygen atom j donates hydrogen bond to i
 c                          write(*,*) xna,dxna,rr
 
 c dE/dq * dq/dr
-c MES : This only affects the oxygens!
+c MES : This only affects the 2 atoms in the HB
                            dem(1,i) = dem(1,i)
      & +(dedci(i)*zdqt(1,3)+dedci(i+1)*zdqt(2,3)
      & +dedci(i+2)*zdqt(3,3))*dxna*xr/rr
