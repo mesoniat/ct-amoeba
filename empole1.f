@@ -6010,6 +6010,7 @@ c
       real*8, allocatable :: fphidp(:,:)
       real*8, allocatable :: cphi(:,:)
       real*8, allocatable :: qgrip(:,:,:,:)
+      real*8, allocatable :: dqgrpci(:,:,:,:)
       real*8, allocatable :: dfuinddci(:,:)
       real*8, allocatable :: dfuinpdci(:,:)
 c
@@ -6040,7 +6041,7 @@ c
       allocate (fphidp(20,npole))
       allocate (cphi(10,npole))
       allocate (dfphidci(1,npole))
-      allocate (dqgrdci(2,nfft1,nfft2,nfft3))
+c     allocate (dqgrdci(2,nfft1,nfft2,nfft3))
       allocate (dqgrpci(2,nfft1,nfft2,nfft3))
       allocate (dfuinddci(3,npole))
       allocate (dfuinpdci(3,npole))
@@ -6100,7 +6101,7 @@ c     and perform the 3-D FFT forward transformation
 c
       if (use_polar) then
 c MES : this is executed
-c        write(*,*) "check 6"
+         write(*,*) "using polar"
          do i = 1, npole
             do j = 2, 4
                cmp(j,i) = cmp(j,i) + uinp(j-1,i)
@@ -6122,6 +6123,7 @@ c make a copy for the different p-scaling
                   qgrip(2,i,j,k) = qgrid(2,i,j,k)
                   dqgrpci(1,i,j,k) = dqgrdci(1,i,j,k)
                   dqgrpci(2,i,j,k) = dqgrdci(2,i,j,k)
+                  write(*,*) i,j,k,dqgrdci(1,i,j,k)
                end do
             end do
          end do
@@ -6144,10 +6146,19 @@ c MES : induced part removed here
             end do
          end do
       else
-c MES : not executed
-c        write(*,*) "check 7"
+c MES : not executed for normal AMOEBA
+         write(*,*) "not using polar"
          call cmp_to_fmp (cmp,fmp)
          call grid_mpole (fmp)
+c        do k = 1, nfft3
+c           do j = 1, nfft2
+c              do i = 1, nfft1
+c                 write(*,*) i,j,k,dqgrdci(1,i,j,k)
+c                 write(*,*) i,j,k,qgrid(1,i,j,k)
+c              end do
+c           end do
+c        end do
+c        write(*,*) "Above is emrecip before fftfront"
          call fftfront
          do k = 1, nfft3
             do j = 1, nfft2
@@ -6156,9 +6167,12 @@ c        write(*,*) "check 7"
                   qgrip(2,i,j,k) = qgrid(2,i,j,k)
                   dqgrpci(1,i,j,k) = dqgrdci(1,i,j,k)
                   dqgrpci(2,i,j,k) = dqgrdci(2,i,j,k)
+c                 write(*,*) i,j,k,dqgrdci(1,i,j,k)
+c                 write(*,*) i,j,k,qgrid(1,i,j,k)
                end do
             end do
          end do
+c        write(*,*) "Above is emrecip after fftfront"
       end if
 c
 c     make the scalar summation over reciprocal lattice
@@ -6352,15 +6366,17 @@ c
                term = qfac(i,j,k)
                qgrid(1,i,j,k) = term * qgrid(1,i,j,k)
                qgrid(2,i,j,k) = term * qgrid(2,i,j,k)
+c MES
+               dqgrdci(1,i,j,k) = term * dqgrdci(1,i,j,k)
+               dqgrdci(2,i,j,k) = term * dqgrdci(2,i,j,k)
             end do
          end do
       end do
 c
 c     perform 3-D FFT backward transform and get potential
+c     fphi calculated from qgrid
 c
       call fftback
-c MES
-c     call fphi_mpole (fphi)
       call fphi_mpole (fphi)
       do i = 1, npole
          do j = 1, 20
@@ -6515,8 +6531,8 @@ c
                   qgrid(1,i,j,k) = term * qgrid(1,i,j,k)
                   qgrid(2,i,j,k) = term * qgrid(2,i,j,k)
 c MES
-c                 dqgriddci(1,i,j,k) = term * dqgriddci(1,i,j,k)
-c                 dqgriddci(2,i,j,k) = term * dqgriddci(2,i,j,k)
+c                 dqgrdci(1,i,j,k) = term * dqgrdci(1,i,j,k)
+c                 dqgrdci(2,i,j,k) = term * dqgrdci(2,i,j,k)
                end do
             end do
          end do
@@ -6526,12 +6542,12 @@ c
          call fftback
          call fphi_uind (fphid,fphip,fphidp)
          do i = 1, npole
+c MES
+c           dfphiddci(1,i) = electric * dfphiddci(1,i)
+c           dfphipdci(1,i) = electric * dfphipdci(1,i)
             do j = 1, 10
                fphid(j,i) = electric * fphid(j,i)
                fphip(j,i) = electric * fphip(j,i)
-c MES
-c              dfphiddci(j,i) = electric * dfphiddci(j,i)
-c              dfphipdci(j,i) = electric * dfphipdci(j,i)
             end do
             do j = 1, 20
                fphidp(j,i) = electric * fphidp(j,i)

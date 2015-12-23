@@ -55,6 +55,8 @@ c
 c
 c     default boundary treatment, B-spline order and grid density
 c
+      write(*,*) "kewald being used"
+
       ffttyp = 'FFTPACK'
       if (nthread .gt. 1)  ffttyp = 'FFTW'
       boundary = 'TINFOIL'
@@ -162,6 +164,7 @@ c
       if (allocated(thetai2))  deallocate (thetai2)
       if (allocated(thetai3))  deallocate (thetai3)
       if (allocated(qgrid))  deallocate (qgrid)
+      if (allocated(dqgrdci))  deallocate (dqgrdci)
       if (allocated(qfac))  deallocate (qfac)
       if (allocated(pmetable))  deallocate (pmetable)
       allocate (bsmod1(nfft1))
@@ -172,6 +175,7 @@ c
       allocate (thetai2(4,bsorder,n))
       allocate (thetai3(4,bsorder,n))
       allocate (qgrid(2,nfft1,nfft2,nfft3))
+      allocate (dqgrdci(2,nfft1,nfft2,nfft3))
       allocate (qfac(nfft1,nfft2,nfft3))
       allocate (pmetable(n,nchunk))
 c

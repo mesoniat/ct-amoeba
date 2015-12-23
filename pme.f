@@ -43,6 +43,8 @@ c
       real*8, allocatable :: thetai2(:,:,:)
       real*8, allocatable :: thetai3(:,:,:)
       real*8, allocatable :: qgrid(:,:,:,:)
+c MES
+      real*8, allocatable :: dqgrdci(:,:,:,:)
       real*8, allocatable :: qfac(:,:,:)
       save
       end

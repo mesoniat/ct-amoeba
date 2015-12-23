@@ -588,7 +588,8 @@ c MES    dfmpdci = 1
                         dqgrdci(1,i,j,k) = dqgrdci(1,i,j,k) 
      &                       + u0*v0*t0
 c this is being updated properly
-c                       write(*,*) i,j,k,dqgrdci(1,i,j,k)
+                        write(*,*) i,j,k,dqgrdci(1,i,j,k)
+                        write(*,*) i,j,k,qgrid(1,i,j,k)
                      end do
                   end do
                end do
@@ -600,6 +601,18 @@ c     end OpenMP directive for the major loop structure
 c
 !$OMP END DO
 !$OMP END PARALLEL
+
+c        write(*,*) "outside OMP parallel"
+c        do k = 1, nfft3
+c           do j = 1, nfft2
+c              do i = 1, nfft1
+c                 write(*,*) i,j,k,dqgrdci(1,i,j,k)
+c                 write(*,*) i,j,k,qgrid(1,i,j,k)
+c              end do
+c           end do
+c        end do
+
+
       write(*,*) "Done with grid_mpole"
       return
       end
@@ -917,7 +930,8 @@ c        write(*,*) "isite ",isite,"   iatm ",iatm,"   igrd0 ",igrd0
                   tq = qgrid(1,i,j,k)
                   t0 = t0 + tq*thetai1(1,it1,iatm)
                   dt0 = dt0 + thetai1(1,it1,iatm)*dqgrdci(1,i,j,k)
-c                 write(*,*) i,j,k,dqgrdci(1,i,j,k)
+                  write(*,*) i,j,k,dqgrdci(1,i,j,k)
+                  write(*,*) i,j,k,qgrid(1,i,j,k)
                   t1 = t1 + tq*thetai1(2,it1,iatm)
                   t2 = t2 + tq*thetai1(3,it1,iatm)
                   t3 = t3 + tq*thetai1(4,it1,iatm)
