@@ -45,6 +45,7 @@ c
       real*8, allocatable :: qgrid(:,:,:,:)
 c MES
       real*8, allocatable :: dqgrdci(:,:,:,:)
+c     real*8, allocatable :: dfphidci(:,:)
       real*8, allocatable :: qfac(:,:,:)
       save
       end

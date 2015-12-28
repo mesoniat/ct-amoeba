@@ -1748,6 +1748,7 @@ c     perform 3-D FFT backward transform and get field
 c
       call fftback
       call fphi_mpole (fphi)
+c     call fphi_mpole (fphi,dfphidci)
 c
 c     convert the field from fractional to Cartesian
 c

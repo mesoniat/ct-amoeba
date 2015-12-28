@@ -258,19 +258,19 @@ c
       if (use_geom)  call egeom1
       if (use_extra)  call extra1
 
-      write(*,*) "empole done : dem(i) :"
-      do i = 1, n
-         write(*,*) dem(1,i),dem(2,i),dem(3,i)
-      end do
+c     write(*,*) "empole done : dem(i) :"
+c     do i = 1, n
+c        write(*,*) dem(1,i),dem(2,i),dem(3,i)
+c     end do
 
 c DCT gets charge transfer contribution to forces
 c        and adds charge transfer energy to em
       if (use_crgtr) call ect1
 
-      write(*,*) "Final dem, after CT"
-      do i = 1, n
-         write(*,*) dem(1,i),dem(2,i),dem(3,i)
-      end do
+c     write(*,*) "Final dem, after CT"
+c     do i = 1, n
+c        write(*,*) dem(1,i),dem(2,i),dem(3,i)
+c     end do
 
 c
 c     sum up to get the total energy and first derivatives
@@ -293,7 +293,7 @@ c
      &                      + des(j,i) + delf(j,i) + deg(j,i)
      &                      + dex(j,i)
             derivs(j,i) = desum(j,i)
-            write(*,*) "derivs(dir,atom) = ",j," ",i," ",derivs(j,i)
+c           write(*,*) "derivs(dir,atom) = ",j," ",i," ",derivs(j,i)
          end do
       end do
 c
@@ -307,8 +307,8 @@ c     if (isnan(esum)) then
          call fatal
       end if
 
-      use_grad = .false.
-      call gtest(derivs)
+c     use_grad = .false.
+c     call gtest(derivs)
 c     call qtest(derivs)
 
       deallocate (dnacti)
@@ -348,7 +348,7 @@ c
       use kmulti
       implicit none
       integer i,j,kk,ii,l,m
-      real*8 xr,yr,zr,rr,pi,sum1,sum2
+      real*8 xr,yr,zr,rr,pi,sum1,sum2,dq
       real*8, allocatable :: nacti(:)
       real*8, allocatable :: ndcti(:)
 
@@ -369,12 +369,12 @@ c  charge transfer matrix
 c  zdqt(i,j) charge transfered to atom i due to hydrogen
 c  bond of type j : j=1, H1 is donor, j=2, H2 is donor, j=3, O accepts
 c  atom i :  1 = O, atom 2 = H1, atom 3 = H2
-      write(*,*) "CT matrix"
-      do i=1,3
-        do j=1,3
-        write(*,*) i,j,zdqt(i,j)
-        end do
-      end do
+c     write(*,*) "CT matrix"
+c     do i=1,3
+c       do j=1,3
+c         write(*,*) i,j,zdqt(i,j)
+c       end do
+c     end do
 
       pi = 4.d0*datan(1.d0)
 
@@ -491,6 +491,10 @@ c hydrogen charges
      & + zdqt(3,3)*nacti(i)
          endif
       enddo
+ 
+      dq = 0.000d0
+      write(*,*) "dq = ",dq
+      rpole(1,4) = rpole(1,4) + dq
 
       if(n.le.6) then
       write(*,*) "New charges : "
@@ -716,7 +720,7 @@ c add to charge transfer energy, no force (energy is constant)
      & *pi/(rct2-rct1)
 c dxna = N' in Eqn A9 of Lee 2011 JCP
 
-                           write(*,*) xna,dxna,rr
+c                          write(*,*) xna,dxna,rr
 
 c ect here only (not above) to avoid double counting
                            ect=ect+muct*(xna*dqt)

@@ -2128,6 +2128,7 @@ c     perform 3-D FFT backward transform and get potential
 c
       call fftback
       call fphi_mpole (fphi)
+c     call fphi_mpole (fphi,dfphidci)
 c
 c     sum over multipoles and increment total multipole energy
 c

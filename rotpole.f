@@ -23,13 +23,20 @@ c
       integer i
       real*8 a(3,3)
 c
+      write(*,*) "entered rotpole"
 c
 c     rotate the atomic multipoles at each site in turn
 c
       do i = 1, npole
+         write(*,*) rpole(1,i)
          call rotmat (i,a)
+         write(*,*) rpole(1,i)
          call rotsite (i,a)
+         write(*,*) rpole(1,i)
       end do
+
+      write(*,*) "done with rotpole"
+
       return
       end
 c
@@ -270,9 +277,11 @@ c
       real*8 m2(3,3)
       real*8 r2(3,3)
 c
+      write(*,*) "entered rotsite"
 c
 c     monopoles have the same value in any coordinate frame
 c
+      write(*,*) rpole(1,isite),pole(1,isite)
       rpole(1,isite) = pole(1,isite)
 c
 c     rotate the dipoles to the global coordinate frame

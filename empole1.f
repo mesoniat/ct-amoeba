@@ -4591,7 +4591,7 @@ c     zero out multipole and polarization energy and derivatives
 c
       allocate (duinddci(3,npole))
       allocate (duinpdci(3,npole))
-      write(*,*) "Are dedci zero?"
+c     write(*,*) "Are dedci zero? Yes." 
       em = 0.0d0
       ep = 0.0d0
       do i = 1, n
@@ -4601,7 +4601,8 @@ c
             duinddci(j,i) = 0.0d0
             duinpdci(j,i) = 0.0d0
          end do
-         write (*,*) i," ",dedci(i)
+c        write (*,*) i," ",dedci(i)
+         write(*,*) i,rpole(1,i)
       end do
       if (npole .eq. 0)  return
 c
@@ -4613,10 +4614,12 @@ c
 c     check the sign of multipole components at chiral sites
 c
       call chkpole
+      write(*,*) "q4 after chkpole",rpole(1,4)
 c
 c     rotate the multipole components into the global frame
 c
       call rotpole
+      write(*,*) "q4 after rotpole",rpole(1,4)
 c
 c     compute the induced dipole moment at each atom
 c
@@ -4626,14 +4629,19 @@ c     rpole(1,1) = rpole(1,1) + 0.001
 c     write(*,*) "new rpole = ",rpole(1,1)
 
       call induce
+      write(*,*) "q4 after induce",rpole(1,4)
 c
 c     compute the reciprocal space part of the Ewald summation
 c
       call emrecip1
+      write(*,*) "dedci(4)",dedci(4)
+      write(*,*) "em",em
 c
 c     compute the real space part of the Ewald summation
 c
       call ereal1d (eintra)
+      write(*,*) "dedci(4)",dedci(4)
+      write(*,*) "em",em
 c
 c     compute the Ewald self-energy term over all the atoms
 c
@@ -4666,9 +4674,9 @@ c Sagui Eqn 25 self term
          em = em + e
          ep = ep + ei
 c DCT dE/dci term
-         write(*,*) i,"  dedci(i)    ",dedci(i)
          dedci(i) = dedci(i) + 2.0d0*ci*fterm
          write(*,*) i,"  dedci(i)    ",dedci(i)
+         write(*,*) rpole(1,i),ci,cii
 c MES : adding induced part
          duindxdci = duinddci(1,i)
          duindydci = duinddci(2,i)
@@ -4677,6 +4685,7 @@ c MES : adding induced part
      &              * ( dix * duindxdci + diy * duindydci 
      &                  + diz * duindzdci )
       end do
+      write(*,*) "em = ",em
 c
 c     compute the self-energy torque term due to induced dipole
 c
@@ -6005,6 +6014,8 @@ c
       real*8, allocatable :: cmp(:,:)
       real*8, allocatable :: fmp(:,:)
       real*8, allocatable :: fphi(:,:)
+c MES
+      real*8, allocatable :: dfphidci(:,:)
       real*8, allocatable :: fphid(:,:)
       real*8, allocatable :: fphip(:,:)
       real*8, allocatable :: fphidp(:,:)
@@ -6040,19 +6051,20 @@ c
       allocate (fphip(10,npole))
       allocate (fphidp(20,npole))
       allocate (cphi(10,npole))
-      allocate (dfphidci(1,npole))
+      allocate (dfphidci(20,npole))
 c     allocate (dqgrdci(2,nfft1,nfft2,nfft3))
       allocate (dqgrpci(2,nfft1,nfft2,nfft3))
       allocate (dfuinddci(3,npole))
       allocate (dfuinpdci(3,npole))
 
       do i = 1 , npole
-        dfphidci(1,i) = 0.0d0
+c       dfphidci(1,i) = 0.0d0
         do j = 1,3
           dfuinddci(j,i) = 0.0d0
           dfuinpdci(j,i) = 0.0d0
         end do
-        write(*,*) i,"  dedci(i)    ",dedci(i)
+c dedci are zero here
+c       write(*,*) i,"  dedci(i)    ",dedci(i)
       end do
 c
 c     zero out the temporary virial accumulation variables
@@ -6146,7 +6158,7 @@ c MES : induced part removed here
             end do
          end do
       else
-c MES : not executed for normal AMOEBA
+c MES : not executed for normal AMOEBA BUT needed for non-pol.
          write(*,*) "not using polar"
          call cmp_to_fmp (cmp,fmp)
          call grid_mpole (fmp)
@@ -6377,7 +6389,9 @@ c     perform 3-D FFT backward transform and get potential
 c     fphi calculated from qgrid
 c
       call fftback
-      call fphi_mpole (fphi)
+c     call fphi_mpole (fphi)
+      call fphi_mpoleCT (fphi,dfphidci)
+      write(*,*) "back in emrecip"
       do i = 1, npole
          do j = 1, 20
             fphi(j,i) = electric * fphi(j,i)
@@ -6389,7 +6403,7 @@ c
 
 c
 c     increment the permanent multipole energy and gradient
-c here fphi is the recip ESP at an atomic site i
+c here fphi is the recip field at an atomic site i
 c      em is recip energy, which is added to direct and self later
 c
       e = 0.0d0
