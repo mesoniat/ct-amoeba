@@ -67,6 +67,11 @@ c
 c
 c     set default parameters for the dynamics trajectory
 c
+      write(*,*) "start of mdinit"
+      do i = 1,n
+        write(*,*) x(i),y(i),z(i)
+      enddo
+
       integrate = 'BEEMAN'
       bmnmix = 8
       nfree = 0
@@ -389,6 +394,7 @@ c
       call version (dynfile,'old')
       inquire (file=dynfile,exist=exist)
       if (exist) then
+         write(*,*) "restart??"
          idyn = freeunit ()
          open (unit=idyn,file=dynfile,status='old')
          rewind (unit=idyn)
@@ -398,6 +404,7 @@ c
 c     set translational velocities for rigid body dynamics
 c
       else if (integrate .eq. 'RIGIDBODY') then
+         write(*,*) "rigid bodies"
          do i = 1, ngrp
             speed = maxwell (grpmass(i),kelvin)
             call ranvec (vec)
@@ -408,10 +415,12 @@ c
             end do
          end do
          if (nuse .eq. n)  call mdrest (0)
+
 c
 c     set velocities and fast/slow accelerations for RESPA method
 c
       else if (integrate .eq. 'RESPA') then
+         write(*,*) "respa integration"
          allocate (derivs(3,n))
          call gradslow (e,derivs)
          do i = 1, n
@@ -447,6 +456,7 @@ c
 c     set velocities and accelerations for Cartesian dynamics
 c
       else
+         write(*,*) "final method in mdinit"
          allocate (derivs(3,n))
          call gradient (e,derivs)
          do i = 1, n
@@ -494,5 +504,6 @@ c
          end if
       end do
       nprior = i - 1
+
       return
       end

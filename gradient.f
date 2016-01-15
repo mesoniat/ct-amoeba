@@ -492,9 +492,9 @@ c hydrogen charges
          endif
       enddo
  
-      dq = 0.000d0
+      dq = 0.0d0
       write(*,*) "dq = ",dq
-      rpole(1,4) = rpole(1,4) + dq
+      rpole(1,4) = rpole(1,4) - dq
 
       if(n.le.6) then
       write(*,*) "New charges : "
@@ -502,6 +502,11 @@ c hydrogen charges
           write(*,*) i," ",rpole(1,i)
         enddo
       endif
+
+c copy new charge to other reference frame
+      do i=1,n
+        pole(1,i) = rpole(1,i)
+      enddo
 
       sum1 = 0.d0
       sum2 = 0.d0
@@ -515,7 +520,7 @@ c         write(*,*) nacti(i),dnacti(i)
 c         write(*,*) ndcti(i),dndcti(i)
         end if
       enddo
-c     write(*,*) "Total system charge : ",sum1,sum2
+      write(*,*) "Total system charge : ",sum1,sum2
 
       deallocate (nacti)
       deallocate (ndcti)

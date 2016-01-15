@@ -75,8 +75,8 @@ c
       implicit none
       integer i,j,k
       real*8, allocatable :: work(:,:)
-      real*8, allocatable :: dwork(:,:)
 c
+      write(*,*) "Entered fftfront : ",ffttyp
 c
 c     perform a single 3-D forward transform using FFTW
 c
@@ -87,23 +87,17 @@ c
 c     perform three 1-D forward transforms using FFTPACK
 c
          allocate (work(2,max(nfft1,nfft2,nfft3)))
-         allocate (dwork(2,max(nfft1,nfft2,nfft3)))
 
          do k = 1, nfft3
             do j = 1, nfft2
                do i = 1, nfft1
                   work(1,i) = qgrid(1,i,j,k)
                   work(2,i) = qgrid(2,i,j,k)
-                  dwork(1,i) = dqgrdci(1,i,j,k)
-                  dwork(2,i) = dqgrdci(2,i,j,k)
                end do
                call cfftf (nfft1,work,ffttable(1,1),iprime(1,1))
-               call cfftf (nfft1,dwork,ffttable(1,1),iprime(1,1))
                do i = 1, nfft1
                   qgrid(1,i,j,k) = work(1,i)
                   qgrid(2,i,j,k) = work(2,i)
-                  dqgrdci(1,i,j,k) = dwork(1,i)
-                  dqgrdci(2,i,j,k) = dwork(2,i)
                end do
             end do
          end do
@@ -112,16 +106,11 @@ c
                do j = 1, nfft2
                   work(1,j) = qgrid(1,i,j,k)
                   work(2,j) = qgrid(2,i,j,k)
-                  dwork(1,j) = dqgrdci(1,i,j,k)
-                  dwork(2,j) = dqgrdci(2,i,j,k)
                end do
                call cfftf (nfft2,work,ffttable(1,2),iprime(1,2))
-               call cfftf (nfft2,dwork,ffttable(1,2),iprime(1,2))
                do j = 1, nfft2
                   qgrid(1,i,j,k) = work(1,j)
                   qgrid(2,i,j,k) = work(2,j)
-                  dqgrdci(1,i,j,k) = dwork(1,j)
-                  dqgrdci(2,i,j,k) = dwork(2,j)
                end do
             end do
          end do
@@ -130,22 +119,26 @@ c
                do k = 1, nfft3
                   work(1,k) = qgrid(1,i,j,k)
                   work(2,k) = qgrid(2,i,j,k)
-                  dwork(1,k) = dqgrdci(1,i,j,k)
-                  dwork(2,k) = dqgrdci(2,i,j,k)
                end do
                call cfftf (nfft3,work,ffttable(1,3),iprime(1,3))
-               call cfftf (nfft3,dwork,ffttable(1,3),iprime(1,3))
                do k = 1, nfft3
                   qgrid(1,i,j,k) = work(1,k)
                   qgrid(2,i,j,k) = work(2,k)
-                  dqgrdci(1,i,j,k) = dwork(1,k)
-                  dqgrdci(2,i,j,k) = dwork(2,k)
                end do
             end do
          end do
          deallocate (work)
-         deallocate (dwork)
 !$    end if
+
+c     do k = 1, nfft3
+c        do j = 1, nfft2
+c           do i = 1, nfft1
+c              write(*,*) i,j,k,qgrid(1,i,j,k)
+c           end do
+c        end do
+c     end do
+
+      write(*,*) "End of fftfront"
       return
       end
 c
@@ -167,8 +160,8 @@ c
       implicit none
       integer i,j,k
       real*8, allocatable :: work(:,:)
-      real*8, allocatable :: dwork(:,:)
 c
+      write(*,*) "Entered fftback"
 c
 c     perform a single 3-D backward transform using FFTW
 c
@@ -179,23 +172,17 @@ c
 c     perform three 1-D backward transforms using FFTPACK
 c
          allocate (work(2,max(nfft1,nfft2,nfft3)))
-         allocate (dwork(2,max(nfft1,nfft2,nfft3)))
 
          do k = 1, nfft3
             do j = 1, nfft2
                do i = 1, nfft1
                   work(1,i) = qgrid(1,i,j,k)
                   work(2,i) = qgrid(2,i,j,k)
-                  dwork(1,i) = dqgrdci(1,i,j,k)
-                  dwork(2,i) = dqgrdci(2,i,j,k)
                end do
                call cfftb (nfft1,work,ffttable(1,1),iprime(1,1))
-               call cfftb (nfft1,dwork,ffttable(1,1),iprime(1,1))
                do i = 1, nfft1
                   qgrid(1,i,j,k) = work(1,i)
                   qgrid(2,i,j,k) = work(2,i)
-                  dqgrdci(1,i,j,k) = dwork(1,i)
-                  dqgrdci(2,i,j,k) = dwork(2,i)
                end do
             end do
          end do
@@ -204,16 +191,11 @@ c
                do j = 1, nfft2
                   work(1,j) = qgrid(1,i,j,k)
                   work(2,j) = qgrid(2,i,j,k)
-                  dwork(1,j) = dqgrdci(1,i,j,k)
-                  dwork(2,j) = dqgrdci(2,i,j,k)
                end do
                call cfftb (nfft2,work,ffttable(1,2),iprime(1,2))
-               call cfftb (nfft2,dwork,ffttable(1,2),iprime(1,2))
                do j = 1, nfft2
                   qgrid(1,i,j,k) = work(1,j)
                   qgrid(2,i,j,k) = work(2,j)
-                  dqgrdci(1,i,j,k) = dwork(1,j)
-                  dqgrdci(2,i,j,k) = dwork(2,j)
                end do
             end do
          end do
@@ -222,22 +204,26 @@ c
                do k = 1, nfft3
                   work(1,k) = qgrid(1,i,j,k)
                   work(2,k) = qgrid(2,i,j,k)
-                  dwork(1,k) = dqgrdci(1,i,j,k)
-                  dwork(2,k) = dqgrdci(2,i,j,k)
                end do
                call cfftb (nfft3,work,ffttable(1,3),iprime(1,3))
-               call cfftb (nfft3,dwork,ffttable(1,3),iprime(1,3))
                do k = 1, nfft3
                   qgrid(1,i,j,k) = work(1,k)
                   qgrid(2,i,j,k) = work(2,k)
-                  dqgrdci(1,i,j,k) = dwork(1,k)
-                  dqgrdci(2,i,j,k) = dwork(2,k)
                end do
             end do
          end do
 
          deallocate (work)
-         deallocate (dwork)
 !$    end if
+
+c     do k = 1, nfft3
+c        do j = 1, nfft2
+c           do i = 1, nfft1
+c              write(*,*) i,j,k,qgrid(1,i,j,k)
+c           end do
+c        end do
+c     end do
+
+      write(*,*) "End of fftback"
       return
       end

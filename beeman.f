@@ -48,6 +48,10 @@ c
       real*8, allocatable :: zold(:)
       real*8, allocatable :: derivs(:,:)
 c
+      do i = 1,n
+        write(*,*) x(i),y(i),z(i)
+      enddo
+
 c
 c     set time values and coefficients for Beeman integration
 c
@@ -83,6 +87,7 @@ c
             z(i) = z(i) + v(3,i)*dt
          end if
       end do
+
 c
 c     get constraint-corrected positions and half-step velocities
 c

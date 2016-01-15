@@ -46,6 +46,11 @@ c
       call initial
       call getxyz
       call mechanic
+      write(*,*) "    Positions: "
+      do i = 1,n
+        write(*,*) x(i),y(i),z(i)
+      enddo
+
 c
 c     initialize the temperature, pressure and coupling baths
 c
@@ -285,6 +290,9 @@ c
          else if (integrate .eq. 'RESPA') then
             call respa (istep,dt)
          else
+            do i = 1,n
+              write(*,*) x(i),y(i),z(i)
+            enddo
             call beeman (istep,dt)
          end if
       end do

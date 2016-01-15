@@ -175,7 +175,7 @@ c
       allocate (thetai2(4,bsorder,n))
       allocate (thetai3(4,bsorder,n))
       allocate (qgrid(2,nfft1,nfft2,nfft3))
-      allocate (dqgrdci(2,nfft1,nfft2,nfft3))
+      allocate (dqgrdci(2,nfft1,nfft2,nfft3,n))
       allocate (qfac(nfft1,nfft2,nfft3))
       allocate (pmetable(n,nchunk))
 c

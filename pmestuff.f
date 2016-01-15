@@ -50,7 +50,7 @@ c     offset used to shift sites off exact lattice bounds
 c
       eps = 1.0d-8
 c
-c     get the B-spline coefficients for each atomic site
+      write(*,*) "get the B-spline coefficients for each atomic site"
 c
       do i = 1, n
          xi = x(i)
@@ -212,6 +212,7 @@ c
       logical posx,posy,posz
       logical midx,midy,midz
 c
+      write(*,*) "table_fill"
 c
 c     zero out the PME table marking chunks per site
 c
@@ -504,6 +505,7 @@ c
       real*8 fmp(10,*)
 c
       write(*,*) "Entered grid_mpole"
+      write(*,*) "    nchunk = ",nchunk
 c
 c     zero out the particle mesh Ewald charge grid
 c
@@ -512,8 +514,10 @@ c
             do i = 1, nfft1
                qgrid(1,i,j,k) = 0.0d0
                qgrid(2,i,j,k) = 0.0d0
-               dqgrdci(1,i,j,k) = 0.0d0
-               dqgrdci(2,i,j,k) = 0.0d0
+               do isite = 1,npole 
+                 dqgrdci(1,i,j,k,isite) = 0.0d0
+                 dqgrdci(2,i,j,k,isite) = 0.0d0
+               end do
             end do
          end do
       end do
@@ -585,11 +589,16 @@ c
                         qgrid(1,i,j,k) = qgrid(1,i,j,k) + term0*t0
      &                                      + term1*t1 + term2*t2
 c MES    dfmpdci = 1
-                        dqgrdci(1,i,j,k) = dqgrdci(1,i,j,k) 
-     &                       + u0*v0*t0
-c this is being updated properly
-c                       write(*,*) i,j,k,dqgrdci(1,i,j,k)
-c                       write(*,*) i,j,k,qgrid(1,i,j,k)
+                        dqgrdci(1,i,j,k,isite) = u0*v0*t0
+                        if ( i.eq.11 .and. j.eq.8 .and. k.eq.7 ) then
+                          write(*,*) i,j,k
+                          write(*,*) isite,qgrid(1,i,j,k),
+     & dqgrdci(1,i,j,k,isite)
+c                         write(*,*) isite,fmp(1,isite)
+c                         write(*,*) i,j,k,dqgrdci(1,i,j,k)
+c                         write(*,*) i,j,k,qgrid(1,i,j,k)
+c                         write(*,*) t0,u0,v0
+                        endif
                      end do
                   end do
                end do
@@ -602,15 +611,18 @@ c
 !$OMP END DO
 !$OMP END PARALLEL
 
-c        write(*,*) "outside OMP parallel"
-c        do k = 1, nfft3
-c           do j = 1, nfft2
-c              do i = 1, nfft1
-c                 write(*,*) i,j,k,dqgrdci(1,i,j,k)
-c                 write(*,*) i,j,k,qgrid(1,i,j,k)
-c              end do
+c     write(*,*) "outside OMP parallel"
+c     do k = 1, nfft3
+c        do j = 1, nfft2
+c           do i = 1, nfft1
+c              if(qgrid(1,i,j,k).ne.0.000000d0) then
+c                write(*,*) i,j,k,dqgrdci(1,i,j,k)
+c                write(*,*) i,j,k,qgrid(1,i,j,k)
+c              end if
 c           end do
 c        end do
+c     end do
+c     write(*,*) "11,8,7",qgrid(1,11,8,7),dqgrdci(1,11,8,7)
 
 
       write(*,*) "Done with grid_mpole"
@@ -1293,15 +1305,19 @@ c
       real*8 cmp(10,*)
       real*8 fmp(10,*)
 c
+      write(*,*) "Entered cmp_to_fmp"
 c
 c     find the matrix to convert Cartesian to fractional
 c
+      write(*,*) "calling cart_to_frac"
       call cart_to_frac (ctf)
+c     write(*,*) "    ctf(1,1) = ",ctf(1,1)
 c
 c     apply the transformation to get the fractional multipoles
 c
       do i = 1, npole
          fmp(1,i) = ctf(1,1) * cmp(1,i)
+c        write(*,*) i,fmp(1,i),cmp(1,i)
          do j = 2, 4
             fmp(j,i) = 0.0d0
             do k = 2, 4
@@ -1315,6 +1331,7 @@ c
             end do
          end do
       end do
+      write(*,*) "End of cmp_to_fmp"
       return
       end
 c
@@ -1410,15 +1427,19 @@ c
       real*8 cphi(10,*)
       real*8 fphi(20,*)
 c
+      write(*,*) "Entered fphi_to_cphi"
 c
 c     find the matrix to convert fractional to Cartesian
 c
+      write(*,*) "Calling frac_to_cart"
       call frac_to_cart (ftc)
+c     write(*,*) "    ftc(1,1) = ",ftc(1,1)
 c
 c     apply the transformation to get the Cartesian potential
 c
       do i = 1, npole
          cphi(1,i) = ftc(1,1) * fphi(1,i)
+c        write(*,*) i,fphi(1,i),cphi(1,i)
 c MES
 c        dcphidqg(1,i) = ftc(1,1) * dfphidqg(1,i)
 c        write(*,*) "cphi(1,i) = ",cphi(1,i)
@@ -1435,6 +1456,8 @@ c        write(*,*) "cphi(1,i) = ",cphi(1,i)
             end do
          end do
       end do
+
+      write(*,*) "End of fphi_to_cphi"
       return
       end
 c
@@ -1557,8 +1580,8 @@ c
       real*8 dfphidci(20,*)
 c
       write(*,*) "Entered fphi_mpoleCT"
-      write(*,*) "bsorder = ",bsorder
-      write(*,*) ""
+c     write(*,*) "bsorder = ",bsorder
+c     write(*,*) ""
 
       allocate (dfphidqg(1,npole))
       dfphitemp = 0.0d0
@@ -1643,9 +1666,13 @@ c        write(*,*) "isite ",isite,"   iatm ",iatm,"   igrd0 ",igrd0
                   i = i0 + 1 + (nfft1-isign(nfft1,i0))/2
                   tq = qgrid(1,i,j,k)
                   t0 = t0 + tq*thetai1(1,it1,iatm)
-                  dt0 = dt0 + thetai1(1,it1,iatm)*dqgrdci(1,i,j,k)
-c                 write(*,*) i,j,k,dqgrdci(1,i,j,k)
-c                 write(*,*) i,j,k,qgrid(1,i,j,k)
+                  dt0 = dt0 
+     &                + thetai1(1,it1,iatm)*dqgrdci(1,i,j,k,isite)
+                  if ( i.eq.11 .and. j.eq.8 .and. k.eq.7 ) then
+                    write(*,*) i,j,k
+                    write(*,*) isite,qgrid(1,i,j,k), 
+     &                         dqgrdci(1,i,j,k,isite)
+                  endif
                   t1 = t1 + tq*thetai1(2,it1,iatm)
                   t2 = t2 + tq*thetai1(3,it1,iatm)
                   t3 = t3 + tq*thetai1(4,it1,iatm)
@@ -1690,10 +1717,10 @@ c        end of it3
 c
 c        mpole of atom/isite calc from grid
          fphi(1,isite) = tuv000
+c MES -- ok mathematically
          dfphidqg(1,isite) = dtuv000
-c MES 
          dfphidci(1,isite) = dfphidqg(1,isite)
-c        write(*,*) isite,dfphidqg(1,isite),dfphidci(1,isite)
+         write(*,*) isite,fphi(1,isite),dfphidci(1,isite)
          fphi(2,isite) = tuv100
          fphi(3,isite) = tuv010
          fphi(4,isite) = tuv001
@@ -1727,6 +1754,7 @@ c
 c     write(*,*) "dfphitemp = ",dfphitemp
       deallocate (dfphidqg)
 
+      write(*,*) "End of fphi_mpoleCT"
       return
       end
 c     end of fphi_mpoleCT
