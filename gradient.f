@@ -492,7 +492,8 @@ c hydrogen charges
          endif
       enddo
  
-      dq = 0.0d0
+c for testing dedci
+      dq = 0.1d0
       write(*,*) "dq = ",dq
       rpole(1,4) = rpole(1,4) - dq
 
