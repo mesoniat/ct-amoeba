@@ -4592,9 +4592,9 @@ c
       enddo
 c
 c     zero out multipole and polarization energy and derivatives
-c
-c     allocate (duinddci(3,npole))
-c     allocate (duinpdci(3,npole))
+ 
+      allocate (duinddci(3,n))
+      allocate (duinpdci(3,n))
 c     write(*,*) "Are dedci zero? Yes." 
       em = 0.0d0
       ep = 0.0d0
@@ -4602,8 +4602,8 @@ c     write(*,*) "Are dedci zero? Yes."
          do j = 1, 3
             dem(j,i) = 0.0d0
             dep(j,i) = 0.0d0
-c           duinddci(j,i) = 0.0d0
-c           duinpdci(j,i) = 0.0d0
+            duinddci(j,i) = 0.0d0
+            duinpdci(j,i) = 0.0d0
          end do
 c        write (*,*) i," ",dedci(i)
          write(*,*) i,rpole(1,i)
@@ -4634,12 +4634,16 @@ c
       call emrecip1
       write(*,*) "dedci(4)",dedci(4)
       write(*,*) "em",em
+      write(*,*) "depdci(4)",depdci(4)
+      write(*,*) "ep",ep
 c
 c     compute the real space part of the Ewald summation
 c
       call ereal1d (eintra)
       write(*,*) "dedci(4)",dedci(4)
       write(*,*) "em",em
+      write(*,*) "depdci(4)",depdci(4)
+      write(*,*) "ep",ep
 c
 c     compute the Ewald self-energy term over all the atoms
 c
@@ -4669,7 +4673,6 @@ c
 c Sagui Eqn 25 self term
          ei = fterm * term * uii / 3.0d0
          em = em + e
-c        write(*,*) i," em(i) = ", e
          ep = ep + ei
 c DCT dE/dci term
          dedci(i) = dedci(i) + 2.0d0*ci*fterm
@@ -4678,14 +4681,15 @@ c        write(*,*) rpole(1,i),ci,cii
 c        write(*,*) fterm,term
 c        write(*,*) dii,qii
 c MES : adding induced part
-c        duindxdci = duinddci(1,i)
-c        duindydci = duinddci(2,i)
-c        duindzdci = duinddci(3,i)
-c        depdci(i) = depdci(i) + ( fterm * term / 3.0d0 ) 
-c    &              * ( dix * duindxdci + diy * duindydci 
-c    &                  + diz * duindzdci )
+         duindxdci = duinddci(1,i)
+         duindydci = duinddci(2,i)
+         duindzdci = duinddci(3,i)
+         depdci(i) = depdci(i) + ( fterm * term / 3.0d0 ) 
+     &              * ( dix * duindxdci + diy * duindydci 
+     &                  + diz * duindzdci )
+         write(*,*) i,"  depdci(i)    ",depdci(i)
       end do
-      write(*,*) "em = ",em
+      write(*,*) "em = ",em,"    ep = ",ep
 c
 c     compute the self-energy torque term due to induced dipole
 c
@@ -4803,6 +4807,9 @@ c
 c     intermolecular energy is total minus intramolecular part
 c
       einter = einter + em + ep - eintra
+
+      deallocate (duinddci)
+      deallocate (duinpdci)
 
       return
       end
@@ -5387,6 +5394,7 @@ c    includes e, ei, erl, erli
                depdci(k) = depdci(k) 
      & - f*((rr1*ci+rr3*(sc(3))+rr5*sc(5))*(1.0d0-mscale(kk)) 
      & + 0.5d0*rr3*(sci(3))*psc3 )
+c MES need depduind here, then duinddci
 c              write(*,*) i,"  dedci(i)    ",dedci(i)
 c              write(*,*) k,"  dedci(k)    ",dedci(k)
 
@@ -6015,6 +6023,7 @@ c
       real*8, allocatable :: fmp(:,:)
       real*8, allocatable :: fphi(:,:)
 c MES
+      real*8, allocatable :: test(:)
       real*8, allocatable :: dfphidci(:,:)
       real*8, allocatable :: fphid(:,:)
       real*8, allocatable :: fphip(:,:)
@@ -6022,7 +6031,8 @@ c MES
       real*8, allocatable :: cphi(:,:)
       real*8, allocatable :: qgrip(:,:,:,:)
       real*8, allocatable :: tmpqgrid(:,:,:,:)
-      real*8, allocatable :: dqgrpci(:,:,:,:)
+      real*8, allocatable :: dqgrpci(:,:,:,:,:)
+c     real*8, allocatable :: dqgrpci(:,:,:,:)
       real*8, allocatable :: dfuinddci(:,:)
       real*8, allocatable :: dfuinpdci(:,:)
       real*8, allocatable :: ei(:)
@@ -6054,9 +6064,9 @@ c
       allocate (fphidp(20,npole))
       allocate (cphi(10,npole))
       allocate (dfphidci(20,npole))
-c     allocate (dqgrdci(2,nfft1,nfft2,nfft3))
-c     allocate (dqgrpci(2,nfft1,nfft2,nfft3,npole))
-      allocate (dqgrpci(2,nfft1,nfft2,nfft3))
+      allocate (test(npole))
+      allocate (dqgrpci(2,nfft1,nfft2,nfft3,npole))
+c     allocate (dqgrpci(2,nfft1,nfft2,nfft3))
       allocate (dfuinddci(3,npole))
       allocate (dfuinpdci(3,npole))
       allocate (ei(npole))
@@ -6071,6 +6081,7 @@ c         write(*,*) i,dfphidci(1,i)
           dfuinddci(j,i) = 0.0d0
           dfuinpdci(j,i) = 0.0d0
         end do
+        test(i) = 0.0d0
 c dedci are zero here
 c       write(*,*) i,"  dedci(i)    ",dedci(i)
       end do
@@ -6144,11 +6155,13 @@ c    so here the grids have already been FT'ed
 c make a copy for the different p-scaling 
                   qgrip(1,i,j,k) = qgrid(1,i,j,k)
                   qgrip(2,i,j,k) = qgrid(2,i,j,k)
-c                 do isite = 1, npole
-                  dqgrpci(1,i,j,k) = dqgrdci(1,i,j,k)
-                  dqgrpci(2,i,j,k) = dqgrdci(2,i,j,k)
-c                 write(*,*) i,j,k,dqgrdci(1,i,j,k)
-c                 end do
+                  do isite = 1, npole
+                    dqgrpci(1,i,j,k,isite) = dqgrdci(1,i,j,k,isite)
+                    dqgrpci(2,i,j,k,isite) = dqgrdci(2,i,j,k,isite)
+c                   dqgrpci(1,i,j,k) = dqgrdci(1,i,j,k)
+c                   dqgrpci(2,i,j,k) = dqgrdci(2,i,j,k)
+c                   write(*,*) i,j,k,dqgrdci(1,i,j,k)
+                  end do
                end do
             end do
          end do
@@ -6199,13 +6212,13 @@ c make temp var for qgrid
             end do
          end do
 c for each atom
-c        do isite = 1,npole
+         do isite = 1,npole
 c copy dqgrdci of that atom to qgrid 
            do k = 1, nfft3
               do j = 1, nfft2
                  do i = 1, nfft1
-                      qgrid(1,i,j,k) = dqgrdci(1,i,j,k)
-                      qgrid(2,i,j,k) = dqgrdci(2,i,j,k)
+                      qgrid(1,i,j,k) = dqgrdci(1,i,j,k,isite)
+                      qgrid(2,i,j,k) = dqgrdci(2,i,j,k,isite)
                  end do
               end do
            end do
@@ -6215,12 +6228,12 @@ c move FT'ed qgrid back to dqgrdci
            do k = 1, nfft3
               do j = 1, nfft2
                  do i = 1, nfft1
-                   dqgrdci(1,i,j,k) = qgrid(1,i,j,k)
-                   dqgrdci(2,i,j,k) = qgrid(2,i,j,k)
+                   dqgrdci(1,i,j,k,isite) = qgrid(1,i,j,k)
+                   dqgrdci(2,i,j,k,isite) = qgrid(2,i,j,k)
                  end do
               end do
            end do
-c        end do
+         end do
 c restore qgrid
          do k = 1, nfft3
             do j = 1, nfft2
@@ -6237,12 +6250,14 @@ c back to normal calculations
                do i = 1, nfft1
                   qgrip(1,i,j,k) = qgrid(1,i,j,k)
                   qgrip(2,i,j,k) = qgrid(2,i,j,k)
-c                 do isite = 1,npole
-                    dqgrpci(1,i,j,k) = dqgrdci(1,i,j,k)
-                    dqgrpci(2,i,j,k) = dqgrdci(2,i,j,k)
+                  do isite = 1,npole
+                    dqgrpci(1,i,j,k,isite) = dqgrdci(1,i,j,k,isite)
+                    dqgrpci(2,i,j,k,isite) = dqgrdci(2,i,j,k,isite)
+c                   dqgrpci(1,i,j,k) = dqgrdci(1,i,j,k)
+c                   dqgrpci(2,i,j,k) = dqgrdci(2,i,j,k)
 c                   write(*,*) i,j,k,dqgrdci(1,i,j,k,isite)
 c                   write(*,*) i,j,k,qgrid(1,i,j,k,isite)
-c                 end do
+                  end do
                end do
             end do
          end do
@@ -6440,12 +6455,16 @@ c
                term = qfac(i,j,k)
                qgrid(1,i,j,k) = term * qgrid(1,i,j,k)
                qgrid(2,i,j,k) = term * qgrid(2,i,j,k)
-c              do isite = 1, npole
-                 dqgrdci(1,i,j,k) = 
-     &                   term * dqgrdci(1,i,j,k)
-                 dqgrdci(2,i,j,k) = 
-     &                   term * dqgrdci(2,i,j,k)
-c              end do
+               do isite = 1, npole
+                 dqgrdci(1,i,j,k,isite) =
+     &                   term * dqgrdci(1,i,j,k,isite)
+                 dqgrdci(2,i,j,k,isite) =
+     &                   term * dqgrdci(2,i,j,k,isite)
+c                dqgrdci(1,i,j,k) = 
+c    &                   term * dqgrdci(1,i,j,k)
+c                dqgrdci(2,i,j,k) = 
+c    &                   term * dqgrdci(2,i,j,k)
+               end do
             end do
          end do
       end do
@@ -6466,13 +6485,15 @@ c make temp var for qgrid
             end do
          end do
 c for each atom
-c        do isite = 1,npole
+         do isite = 1,npole
 c copy dqgrdci of that atom to qgrid 
            do k = 1, nfft3
               do j = 1, nfft2
                  do i = 1, nfft1
-                      qgrid(1,i,j,k) = dqgrdci(1,i,j,k)
-                      qgrid(2,i,j,k) = dqgrdci(2,i,j,k)
+                      qgrid(1,i,j,k) = dqgrdci(1,i,j,k,isite)
+                      qgrid(2,i,j,k) = dqgrdci(2,i,j,k,isite)
+c                     qgrid(1,i,j,k) = dqgrdci(1,i,j,k)
+c                     qgrid(2,i,j,k) = dqgrdci(2,i,j,k)
                  end do
               end do
            end do
@@ -6482,12 +6503,14 @@ c move FT'ed qgrid back to dqgrdci
            do k = 1, nfft3
               do j = 1, nfft2
                  do i = 1, nfft1
-                   dqgrdci(1,i,j,k) = qgrid(1,i,j,k)
-                   dqgrdci(2,i,j,k) = qgrid(2,i,j,k)
+                   dqgrdci(1,i,j,k,isite) = qgrid(1,i,j,k)
+                   dqgrdci(2,i,j,k,isite) = qgrid(2,i,j,k)
+c                  dqgrdci(1,i,j,k) = qgrid(1,i,j,k)
+c                  dqgrdci(2,i,j,k) = qgrid(2,i,j,k)
                  end do
               end do
            end do
-c        end do
+         end do
 c restore qgrid
          do k = 1, nfft3
             do j = 1, nfft2
@@ -6537,6 +6560,11 @@ c
               dedci(i) = dedci(i) + fphi(k,i)
             endif
             dedci(i) = dedci(i) + (fmp(k,i)*dfphidci(k,i))
+            do j = 1,npole
+              if (j.ne.i) then
+                test(i) = test(i) + fmp(k,i)*dfphidci(k,j)
+              end if
+            end do
             f1 = f1 + fmp(k,i)*fphi(deriv1(k),i)
             f2 = f2 + fmp(k,i)*fphi(deriv2(k),i)
             f3 = f3 + fmp(k,i)*fphi(deriv3(k),i)
@@ -6551,10 +6579,11 @@ c
 
       e = 0.5d0 * e
       do i = 1, npole
+        test(i) = 0.50d0 * test(i)
         dedci(i) = 0.5d0*dedci(i)
         demdci = demdci + dedci(i)
         ei(i) = 0.50d0*ei(i)
-        write(*,*) ei(i),dedci(i),demdci
+        write(*,*) ei(i),dedci(i),test(i)
       end do
       em = em + e
       do i = 1, npole

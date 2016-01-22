@@ -48,9 +48,6 @@ c     real*8, allocatable :: deintradci(:)
       real*8 deintradci
       real*8, allocatable :: duinddci(:,:)
       real*8, allocatable :: duinpdci(:,:)
-c     real*8, allocatable :: dfphidci(:,:)
-c     real*8, allocatable :: dqgrdci(:,:,:,:)
-c     real*8, allocatable :: dqgrpci(:,:,:,:)
       character*8, allocatable :: polaxe(:)
       save
       end

@@ -514,10 +514,12 @@ c
             do i = 1, nfft1
                qgrid(1,i,j,k) = 0.0d0
                qgrid(2,i,j,k) = 0.0d0
-c              do isite = 1,npole 
-                 dqgrdci(1,i,j,k) = 0.0d0
-                 dqgrdci(2,i,j,k) = 0.0d0
-c              end do
+               do isite = 1,npole 
+c                dqgrdci(1,i,j,k) = 0.0d0
+c                dqgrdci(2,i,j,k) = 0.0d0
+                 dqgrdci(1,i,j,k,isite) = 0.0d0
+                 dqgrdci(2,i,j,k,isite) = 0.0d0
+               end do
             end do
          end do
       end do
@@ -589,12 +591,13 @@ c
                         qgrid(1,i,j,k) = qgrid(1,i,j,k) + term0*t0
      &                                      + term1*t1 + term2*t2
 c MES    dfmpdci = 1
-                        dqgrdci(1,i,j,k) = dqgrdci(1,i,j,k)+u0*v0*t0
-c                       dqgrdci(1,i,j,k,isite) = u0*v0*t0
+c                       dqgrdci(1,i,j,k) = dqgrdci(1,i,j,k)+u0*v0*t0
+                        dqgrdci(1,i,j,k,isite) = u0*v0*t0
                         if ( i.eq.11 .and. j.eq.8 .and. k.eq.7 ) then
                           write(*,*) i,j,k
                           write(*,*) isite,qgrid(1,i,j,k),
-     & dqgrdci(1,i,j,k)
+c    & dqgrdci(1,i,j,k)
+     & dqgrdci(1,i,j,k,isite)
 c                         write(*,*) isite,fmp(1,isite)
 c                         write(*,*) i,j,k,dqgrdci(1,i,j,k)
 c                         write(*,*) i,j,k,qgrid(1,i,j,k)
@@ -1707,25 +1710,26 @@ c        write(*,*) "isite ",isite,"   iatm ",iatm,"   igrd0 ",igrd0
                   tq = qgrid(1,i,j,k)
                   t0 = t0 + tq*thetai1(1,it1,iatm)
                   dt0 = dt0 
-     &                + thetai1(1,it1,iatm)*dqgrdci(1,i,j,k)
-c    &                + thetai1(1,it1,iatm)*dqgrdci(1,i,j,k,isite)
+c    &                + thetai1(1,it1,iatm)*dqgrdci(1,i,j,k)
+     &                + thetai1(1,it1,iatm)*dqgrdci(1,i,j,k,isite)
                   if ( i.eq.11 .and. j.eq.8 .and. k.eq.7 ) then
                     write(*,*) i,j,k
                     write(*,*) isite,qgrid(1,i,j,k), 
-     &                         dqgrdci(1,i,j,k)
+c    &                         dqgrdci(1,i,j,k)
+     &                         dqgrdci(1,i,j,k,isite)
                   endif
                   t1 = t1 + tq*thetai1(2,it1,iatm)
                   dt1 = dt1
-     &                + thetai1(2,it1,iatm)*dqgrdci(1,i,j,k)
-c    &                + thetai1(2,it1,iatm)*dqgrdci(1,i,j,k,isite)
+c    &                + thetai1(2,it1,iatm)*dqgrdci(1,i,j,k)
+     &                + thetai1(2,it1,iatm)*dqgrdci(1,i,j,k,isite)
                   t2 = t2 + tq*thetai1(3,it1,iatm)
                   dt2 = dt2
-     &                + thetai1(3,it1,iatm)*dqgrdci(1,i,j,k)
-c    &                + thetai1(3,it1,iatm)*dqgrdci(1,i,j,k,isite)
+c    &                + thetai1(3,it1,iatm)*dqgrdci(1,i,j,k)
+     &                + thetai1(3,it1,iatm)*dqgrdci(1,i,j,k,isite)
                   t3 = t3 + tq*thetai1(4,it1,iatm)
                   dt3 = dt3
-     &                + thetai1(4,it1,iatm)*dqgrdci(1,i,j,k)
-c    &                + thetai1(4,it1,iatm)*dqgrdci(1,i,j,k,isite)
+c    &                + thetai1(4,it1,iatm)*dqgrdci(1,i,j,k)
+     &                + thetai1(4,it1,iatm)*dqgrdci(1,i,j,k,isite)
                end do
 c              end of it1
                tu00 = tu00 + t0*u0
