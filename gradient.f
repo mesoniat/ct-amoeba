@@ -493,9 +493,9 @@ c hydrogen charges
       enddo
  
 c for testing dedci
-      dq = 0.1d0
+      dq = 0.0d0
       write(*,*) "dq = ",dq
-      rpole(1,4) = rpole(1,4) - dq
+      rpole(1,4) = rpole(1,4) + dq
 
       if(n.le.6) then
       write(*,*) "New charges : "

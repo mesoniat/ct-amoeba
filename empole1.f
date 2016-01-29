@@ -6024,7 +6024,9 @@ c
       real*8, allocatable :: fphi(:,:)
 c MES
       real*8, allocatable :: test(:)
+      real*8, allocatable :: test2(:)
       real*8, allocatable :: dfphidci(:,:)
+      real*8, allocatable :: dfphidci2(:,:)
       real*8, allocatable :: fphid(:,:)
       real*8, allocatable :: fphip(:,:)
       real*8, allocatable :: fphidp(:,:)
@@ -6032,7 +6034,7 @@ c MES
       real*8, allocatable :: qgrip(:,:,:,:)
       real*8, allocatable :: tmpqgrid(:,:,:,:)
       real*8, allocatable :: dqgrpci(:,:,:,:,:)
-c     real*8, allocatable :: dqgrpci(:,:,:,:)
+      real*8, allocatable :: dqgrpci2(:,:,:,:)
       real*8, allocatable :: dfuinddci(:,:)
       real*8, allocatable :: dfuinpdci(:,:)
       real*8, allocatable :: ei(:)
@@ -6064,9 +6066,11 @@ c
       allocate (fphidp(20,npole))
       allocate (cphi(10,npole))
       allocate (dfphidci(20,npole))
+      allocate (dfphidci2(20,npole))
       allocate (test(npole))
+      allocate (test2(npole))
       allocate (dqgrpci(2,nfft1,nfft2,nfft3,npole))
-c     allocate (dqgrpci(2,nfft1,nfft2,nfft3))
+      allocate (dqgrpci2(2,nfft1,nfft2,nfft3))
       allocate (dfuinddci(3,npole))
       allocate (dfuinpdci(3,npole))
       allocate (ei(npole))
@@ -6075,6 +6079,7 @@ c     allocate (dqgrpci(2,nfft1,nfft2,nfft3))
       do i = 1 , npole
         do k = 1,20
           dfphidci(k,i) = 0.0d0
+          dfphidci2(k,i) = 0.0d0
 c         write(*,*) i,dfphidci(1,i)
         end do
         do j = 1,3
@@ -6082,6 +6087,7 @@ c         write(*,*) i,dfphidci(1,i)
           dfuinpdci(j,i) = 0.0d0
         end do
         test(i) = 0.0d0
+        test2(i) = 0.0d0
 c dedci are zero here
 c       write(*,*) i,"  dedci(i)    ",dedci(i)
       end do
@@ -6158,10 +6164,10 @@ c make a copy for the different p-scaling
                   do isite = 1, npole
                     dqgrpci(1,i,j,k,isite) = dqgrdci(1,i,j,k,isite)
                     dqgrpci(2,i,j,k,isite) = dqgrdci(2,i,j,k,isite)
-c                   dqgrpci(1,i,j,k) = dqgrdci(1,i,j,k)
-c                   dqgrpci(2,i,j,k) = dqgrdci(2,i,j,k)
 c                   write(*,*) i,j,k,dqgrdci(1,i,j,k)
                   end do
+                  dqgrpci2(1,i,j,k) = dqgrdci2(1,i,j,k)
+                  dqgrpci2(2,i,j,k) = dqgrdci2(2,i,j,k)
                end do
             end do
          end do
@@ -6234,6 +6240,24 @@ c move FT'ed qgrid back to dqgrdci
               end do
            end do
          end do
+c repeat for dqgrdci2
+         do k = 1, nfft3
+            do j = 1, nfft2
+               do i = 1, nfft1
+                    qgrid(1,i,j,k) = dqgrdci2(1,i,j,k)
+                    qgrid(2,i,j,k) = dqgrdci2(2,i,j,k)
+               end do
+            end do
+         end do
+         call fftfront
+         do k = 1, nfft3
+            do j = 1, nfft2
+               do i = 1, nfft1
+                 dqgrdci2(1,i,j,k) = qgrid(1,i,j,k)
+                 dqgrdci2(2,i,j,k) = qgrid(2,i,j,k)
+               end do
+            end do
+         end do
 c restore qgrid
          do k = 1, nfft3
             do j = 1, nfft2
@@ -6253,11 +6277,11 @@ c back to normal calculations
                   do isite = 1,npole
                     dqgrpci(1,i,j,k,isite) = dqgrdci(1,i,j,k,isite)
                     dqgrpci(2,i,j,k,isite) = dqgrdci(2,i,j,k,isite)
-c                   dqgrpci(1,i,j,k) = dqgrdci(1,i,j,k)
-c                   dqgrpci(2,i,j,k) = dqgrdci(2,i,j,k)
 c                   write(*,*) i,j,k,dqgrdci(1,i,j,k,isite)
 c                   write(*,*) i,j,k,qgrid(1,i,j,k,isite)
                   end do
+                  dqgrpci2(1,i,j,k) = dqgrdci2(1,i,j,k)
+                  dqgrpci2(2,i,j,k) = dqgrdci2(2,i,j,k)
                end do
             end do
          end do
@@ -6266,8 +6290,9 @@ c        write(*,*) "Above is emrecip after fftfront"
 c
 c     make the scalar summation over reciprocal lattice
 c for the virial
+c MES could add dedci calc here ??
 c
-      write(*,*) "lattice sums"
+      write(*,*) "lattice sums: nnft1 = ",nfft1
       ntot = nfft1 * nfft2 * nfft3
       pterm = (pi/aewald)**2
       volterm = pi * volbox
@@ -6460,11 +6485,11 @@ c
      &                   term * dqgrdci(1,i,j,k,isite)
                  dqgrdci(2,i,j,k,isite) =
      &                   term * dqgrdci(2,i,j,k,isite)
-c                dqgrdci(1,i,j,k) = 
-c    &                   term * dqgrdci(1,i,j,k)
-c                dqgrdci(2,i,j,k) = 
-c    &                   term * dqgrdci(2,i,j,k)
                end do
+               dqgrdci2(1,i,j,k) = 
+     &                   term * dqgrdci2(1,i,j,k)
+               dqgrdci2(2,i,j,k) = 
+     &                   term * dqgrdci2(2,i,j,k)
             end do
          end do
       end do
@@ -6492,8 +6517,6 @@ c copy dqgrdci of that atom to qgrid
                  do i = 1, nfft1
                       qgrid(1,i,j,k) = dqgrdci(1,i,j,k,isite)
                       qgrid(2,i,j,k) = dqgrdci(2,i,j,k,isite)
-c                     qgrid(1,i,j,k) = dqgrdci(1,i,j,k)
-c                     qgrid(2,i,j,k) = dqgrdci(2,i,j,k)
                  end do
               end do
            end do
@@ -6505,11 +6528,27 @@ c move FT'ed qgrid back to dqgrdci
                  do i = 1, nfft1
                    dqgrdci(1,i,j,k,isite) = qgrid(1,i,j,k)
                    dqgrdci(2,i,j,k,isite) = qgrid(2,i,j,k)
-c                  dqgrdci(1,i,j,k) = qgrid(1,i,j,k)
-c                  dqgrdci(2,i,j,k) = qgrid(2,i,j,k)
                  end do
               end do
            end do
+         end do
+c repeat for dqgrdci2
+         do k = 1, nfft3
+            do j = 1, nfft2
+               do i = 1, nfft1
+                    qgrid(1,i,j,k) = dqgrdci2(1,i,j,k)
+                    qgrid(2,i,j,k) = dqgrdci2(2,i,j,k)
+               end do
+            end do
+         end do
+         call fftback
+         do k = 1, nfft3
+            do j = 1, nfft2
+               do i = 1, nfft1
+                 dqgrdci2(1,i,j,k) = qgrid(1,i,j,k)
+                 dqgrdci2(2,i,j,k) = qgrid(2,i,j,k)
+               end do
+            end do
          end do
 c restore qgrid
          do k = 1, nfft3
@@ -6522,17 +6561,18 @@ c restore qgrid
          end do
 
 
-
 c     call fphi_mpole (fphi)
       write(*,*) "Calling fphi_mpoleCT"
-      call fphi_mpoleCT (fphi,dfphidci)
+      call fphi_mpoleCT (fphi,dfphidci,dfphidci2)
       write(*,*) "back in emrecip"
       do i = 1, npole
 c        write(*,*) i,fphi(1,i),dfphidci(1,i)
          do j = 1, 20
             fphi(j,i) = electric * fphi(j,i)
             dfphidci(j,i) = electric*dfphidci(j,i)
-            write(*,*) i,j,fphi(j,i)
+            dfphidci2(j,i) = electric*dfphidci2(j,i)
+            write(*,*) i,j
+            write(*,*) fphi(j,i),dfphidci(j,i),dfphidci2(j,i)
          end do
       end do
       write(*,*) "Calling fphi_to_cphi"
@@ -6546,6 +6586,7 @@ c      (due to contributions in recip space,
 c       but the calculation occurs in real space)
 c      em is recip energy, which is added to direct and self later
 c
+c PROBLEM
       write(*,*) "energy and dedci calc. em = ",em
       e = 0.0d0
       do i = 1, npole
@@ -6560,9 +6601,11 @@ c
               dedci(i) = dedci(i) + fphi(k,i)
             endif
             dedci(i) = dedci(i) + (fmp(k,i)*dfphidci(k,i))
+            dedci2(i) = dedci2(i) + (fmp(k,i)*dfphidci2(k,i))
             do j = 1,npole
               if (j.ne.i) then
                 test(i) = test(i) + fmp(k,i)*dfphidci(k,j)
+                test2(i) = test2(i) + fmp(k,i)*dfphidci2(k,j)
               end if
             end do
             f1 = f1 + fmp(k,i)*fphi(deriv1(k),i)
@@ -6577,13 +6620,16 @@ c
          frc(3,i) = recip(3,1)*f1 + recip(3,2)*f2 + recip(3,3)*f3
       end do
 
+c may not need factor of half for derivatives -- see SWR notes
       e = 0.5d0 * e
       do i = 1, npole
         test(i) = 0.50d0 * test(i)
+        test2(i) = 0.50d0 * test2(i)
         dedci(i) = 0.5d0*dedci(i)
         demdci = demdci + dedci(i)
         ei(i) = 0.50d0*ei(i)
-        write(*,*) ei(i),dedci(i),test(i)
+        write(*,*) ei(i),dedci(i),dedci2(i)
+        write(*,*) "          ",test(i),test2(i)
       end do
       em = em + e
       do i = 1, npole
@@ -6922,10 +6968,13 @@ c
       deallocate (fphip)
       deallocate (fphidp)
       deallocate (dfuinddci)
-c MES : dealloc causes seg fault in pmestuff.f
-c     deallocate (dfphidci)
-c     deallocate (dqgrdci)
       deallocate (cphi)
+      deallocate (dfphidci)
+      deallocate (dfphidci2)
+      deallocate (dqgrpci)
+      deallocate (dqgrpci2)
+      deallocate (test)
+      deallocate (test2)
       return
       end
 c end of emrecip1

@@ -551,7 +551,11 @@ c
       if (allocated(thetai2))  deallocate (thetai2)
       if (allocated(thetai3))  deallocate (thetai3)
       if (allocated(qgrid))  deallocate (qgrid)
+c DCT
       if (allocated(dqgrdci))  deallocate (dqgrdci)
+      if (allocated(dqgrdci2))  deallocate (dqgrdci2)
+      if (allocated(dedci)) deallocate (dedci)
+      if (allocated(dedci2)) deallocate (dedci2)
 c     if (allocated(qfac))  deallocate (qfac)
 c
 c     deallocation of global arrays from module polar

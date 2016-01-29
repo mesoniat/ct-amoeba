@@ -515,11 +515,11 @@ c
                qgrid(1,i,j,k) = 0.0d0
                qgrid(2,i,j,k) = 0.0d0
                do isite = 1,npole 
-c                dqgrdci(1,i,j,k) = 0.0d0
-c                dqgrdci(2,i,j,k) = 0.0d0
                  dqgrdci(1,i,j,k,isite) = 0.0d0
                  dqgrdci(2,i,j,k,isite) = 0.0d0
                end do
+               dqgrdci2(1,i,j,k) = 0.0d0
+               dqgrdci2(2,i,j,k) = 0.0d0
             end do
          end do
       end do
@@ -591,17 +591,13 @@ c
                         qgrid(1,i,j,k) = qgrid(1,i,j,k) + term0*t0
      &                                      + term1*t1 + term2*t2
 c MES    dfmpdci = 1
-c                       dqgrdci(1,i,j,k) = dqgrdci(1,i,j,k)+u0*v0*t0
-                        dqgrdci(1,i,j,k,isite) = u0*v0*t0
+                        dqgrdci2(1,i,j,k) = dqgrdci2(1,i,j,k)+u0*v0*t0
+                        dqgrdci(1,i,j,k,isite) = dqgrdci(1,i,j,k,isite) 
+     & + u0*v0*t0
                         if ( i.eq.11 .and. j.eq.8 .and. k.eq.7 ) then
-                          write(*,*) i,j,k
-                          write(*,*) isite,qgrid(1,i,j,k),
-c    & dqgrdci(1,i,j,k)
-     & dqgrdci(1,i,j,k,isite)
-c                         write(*,*) isite,fmp(1,isite)
-c                         write(*,*) i,j,k,dqgrdci(1,i,j,k)
-c                         write(*,*) i,j,k,qgrid(1,i,j,k)
-c                         write(*,*) t0,u0,v0
+                          write(*,*) i,j,k,isite
+                          write(*,*) qgrid(1,i,j,k),
+     & dqgrdci2(1,i,j,k), dqgrdci(1,i,j,k,isite)
                         endif
                      end do
                   end do
@@ -1557,7 +1553,7 @@ c     "fphi_mpoleCT" extracts the permanent multipole potential from
 c     the particle mesh Ewald grid
 c
 c
-      subroutine fphi_mpoleCT (fphi,dfphidci)
+      subroutine fphi_mpoleCT (fphi,dfphidci,dfphidci2)
       use sizes
       use mpole
       use pme
@@ -1571,25 +1567,34 @@ c
       real*8 u0,u1,u2,u3
       real*8 t0,t1,t2,t3,tq
       real*8 dt0,dt1,dt2,dt3
+      real*8 dt0_2,dt1_2,dt2_2,dt3_2
       real*8 tu00,tu10,tu01,tu20,tu11
       real*8 dtu00,dtu10,dtu01,dtu20,dtu11
+      real*8 dtu00_2,dtu10_2,dtu01_2,dtu20_2,dtu11_2
       real*8 tu02,tu21,tu12,tu30,tu03
       real*8 dtu02,dtu21,dtu12,dtu30,dtu03
+      real*8 dtu02_2,dtu21_2,dtu12_2,dtu30_2,dtu03_2
       real*8 tuv000,tuv100,tuv010,tuv001
       real*8 dtuv000,dtuv100,dtuv010,dtuv001
+      real*8 dtuv000_2,dtuv100_2,dtuv010_2,dtuv001_2
       real*8 tuv200,tuv020,tuv002,tuv110
       real*8 dtuv200,dtuv020,dtuv002,dtuv110
+      real*8 dtuv200_2,dtuv020_2,dtuv002_2,dtuv110_2
       real*8 tuv101,tuv011,tuv300,tuv030
       real*8 dtuv101,dtuv011,dtuv300,dtuv030
+      real*8 dtuv101_2,dtuv011_2,dtuv300_2,dtuv030_2
       real*8 tuv003,tuv210,tuv201,tuv120
       real*8 dtuv003,dtuv210,dtuv201,dtuv120
+      real*8 dtuv003_2,dtuv210_2,dtuv201_2,dtuv120_2
       real*8 tuv021,tuv102,tuv012,tuv111
       real*8 dtuv021,dtuv102,dtuv012,dtuv111
+      real*8 dtuv021_2,dtuv102_2,dtuv012_2,dtuv111_2
       real*8 dtuv000dqg
       real*8, allocatable :: dfphidqg(:,:)
       real*8 dfphitemp
       real*8 fphi(20,*)
       real*8 dfphidci(20,*)
+      real*8 dfphidci2(20,*)
 c
       write(*,*) "Entered fphi_mpoleCT"
 c     write(*,*) "bsorder = ",bsorder
@@ -1606,7 +1611,7 @@ c
 c MES added dqgrdci and dfphidci to OMP shared var.
 !$OMP PARALLEL default(private) shared(npole,ipole,igrid,bsorder,
 !$OMP& nfft3,thetai3,nfft2,thetai2,nfft1,thetai1,qgrid,fphi,
-!$OMP& dqgrdci,dfphidci,dfphitemp)
+!$OMP& dqgrdci,dqgrdci2,dfphidci,dfphidci2,dfphitemp)
 !$OMP DO
 c
 c     extract the permanent multipole field at each site
@@ -1621,44 +1626,64 @@ c        location of isite on grid
 c        write(*,*) "isite ",isite,"   iatm ",iatm,"   igrd0 ",igrd0
          tuv000 = 0.0d0
          dtuv000 = 0.0d0
+         dtuv000_2 = 0.0d0
          tuv001 = 0.0d0
          dtuv001 = 0.0d0
+         dtuv001_2 = 0.0d0
          tuv010 = 0.0d0
          dtuv010 = 0.0d0
+         dtuv010_2 = 0.0d0
          tuv100 = 0.0d0
          dtuv100 = 0.0d0
+         dtuv100_2 = 0.0d0
          tuv200 = 0.0d0
          dtuv200 = 0.0d0
+         dtuv200_2 = 0.0d0
          tuv020 = 0.0d0
          dtuv020 = 0.0d0
+         dtuv020_2 = 0.0d0
          tuv002 = 0.0d0
          dtuv002 = 0.0d0
+         dtuv002_2 = 0.0d0
          tuv110 = 0.0d0
          dtuv110 = 0.0d0
+         dtuv110_2 = 0.0d0
          tuv101 = 0.0d0
          dtuv101 = 0.0d0
+         dtuv101_2 = 0.0d0
          tuv011 = 0.0d0
          dtuv011 = 0.0d0
+         dtuv011_2 = 0.0d0
          tuv300 = 0.0d0
          dtuv300 = 0.0d0
+         dtuv300_2 = 0.0d0
          tuv030 = 0.0d0
          dtuv030 = 0.0d0
+         dtuv030_2 = 0.0d0
          tuv003 = 0.0d0
          dtuv003 = 0.0d0
+         dtuv003_2 = 0.0d0
          tuv210 = 0.0d0
          dtuv210 = 0.0d0
+         dtuv210_2 = 0.0d0
          tuv201 = 0.0d0
          dtuv201 = 0.0d0
+         dtuv201_2 = 0.0d0
          tuv120 = 0.0d0
          dtuv120 = 0.0d0
+         dtuv120_2 = 0.0d0
          tuv021 = 0.0d0
          dtuv021 = 0.0d0
+         dtuv021_2 = 0.0d0
          tuv102 = 0.0d0
          dtuv102 = 0.0d0
+         dtuv102_2 = 0.0d0
          tuv012 = 0.0d0
          dtuv012 = 0.0d0
+         dtuv012_2 = 0.0d0
          tuv111 = 0.0d0
          dtuv111 = 0.0d0
+         dtuv111_2 = 0.0d0
          k0 = kgrd0
          do it3 = 1, bsorder
             k0 = k0 + 1
@@ -1669,24 +1694,34 @@ c        write(*,*) "isite ",isite,"   iatm ",iatm,"   igrd0 ",igrd0
             v3 = thetai3(4,it3,iatm)
             tu00 = 0.0d0
             dtu00 = 0.0d0
+            dtu00_2 = 0.0d0
             tu10 = 0.0d0
             dtu10 = 0.0d0
+            dtu10_2 = 0.0d0
             tu01 = 0.0d0
             dtu01 = 0.0d0
+            dtu01_2 = 0.0d0
             tu20 = 0.0d0
             dtu20 = 0.0d0
+            dtu20_2 = 0.0d0
             tu11 = 0.0d0
             dtu11 = 0.0d0
+            dtu11_2 = 0.0d0
             tu02 = 0.0d0
             dtu02 = 0.0d0
+            dtu02_2 = 0.0d0
             tu30 = 0.0d0
             dtu30 = 0.0d0
+            dtu30_2 = 0.0d0
             tu21 = 0.0d0
             dtu21 = 0.0d0
+            dtu21_2 = 0.0d0
             tu12 = 0.0d0
             dtu12 = 0.0d0
+            dtu12_2 = 0.0d0
             tu03 = 0.0d0
             dtu03 = 0.0d0
+            dtu03_2 = 0.0d0
             j0 = jgrd0
             do it2 = 1, bsorder
                j0 = j0 + 1
@@ -1697,151 +1732,207 @@ c        write(*,*) "isite ",isite,"   iatm ",iatm,"   igrd0 ",igrd0
                u3 = thetai2(4,it2,iatm)
                t0 = 0.0d0
                dt0 = 0.0d0
+               dt0_2 = 0.0d0
                t1 = 0.0d0
                dt1 = 0.0d0
+               dt1_2 = 0.0d0
                t2 = 0.0d0
                dt2 = 0.0d0
+               dt2_2 = 0.0d0
                t3 = 0.0d0
                dt3 = 0.0d0
+               dt3_2 = 0.0d0
                i0 = igrd0
                do it1 = 1, bsorder
                   i0 = i0 + 1
                   i = i0 + 1 + (nfft1-isign(nfft1,i0))/2
-                  tq = qgrid(1,i,j,k)
-                  t0 = t0 + tq*thetai1(1,it1,iatm)
-                  dt0 = dt0 
-c    &                + thetai1(1,it1,iatm)*dqgrdci(1,i,j,k)
-     &                + thetai1(1,it1,iatm)*dqgrdci(1,i,j,k,isite)
                   if ( i.eq.11 .and. j.eq.8 .and. k.eq.7 ) then
-                    write(*,*) i,j,k
-                    write(*,*) isite,qgrid(1,i,j,k), 
-c    &                         dqgrdci(1,i,j,k)
+                    write(*,*) i,j,k,isite
+                    write(*,*) qgrid(1,i,j,k),dqgrdci2(1,i,j,k),
      &                         dqgrdci(1,i,j,k,isite)
                   endif
+                  tq = qgrid(1,i,j,k)
+                  t0 = t0 + tq*thetai1(1,it1,iatm)
+                  dt0_2 = dt0_2 
+     &                + thetai1(1,it1,iatm)*dqgrdci2(1,i,j,k)
+                  dt0 = dt0 
+     &                + thetai1(1,it1,iatm)*dqgrdci(1,i,j,k,isite)
                   t1 = t1 + tq*thetai1(2,it1,iatm)
+                  dt1_2 = dt1_2
+     &                + thetai1(2,it1,iatm)*dqgrdci2(1,i,j,k)
                   dt1 = dt1
-c    &                + thetai1(2,it1,iatm)*dqgrdci(1,i,j,k)
      &                + thetai1(2,it1,iatm)*dqgrdci(1,i,j,k,isite)
                   t2 = t2 + tq*thetai1(3,it1,iatm)
+                  dt2_2 = dt2_2
+     &                + thetai1(3,it1,iatm)*dqgrdci2(1,i,j,k)
                   dt2 = dt2
-c    &                + thetai1(3,it1,iatm)*dqgrdci(1,i,j,k)
      &                + thetai1(3,it1,iatm)*dqgrdci(1,i,j,k,isite)
                   t3 = t3 + tq*thetai1(4,it1,iatm)
+                  dt3_2 = dt3_2
+     &                + thetai1(4,it1,iatm)*dqgrdci2(1,i,j,k)
                   dt3 = dt3
-c    &                + thetai1(4,it1,iatm)*dqgrdci(1,i,j,k)
      &                + thetai1(4,it1,iatm)*dqgrdci(1,i,j,k,isite)
                end do
 c              end of it1
                tu00 = tu00 + t0*u0
                dtu00 = dtu00 + dt0*u0
+               dtu00_2 = dtu00_2 + dt0_2*u0
                tu10 = tu10 + t1*u0
                dtu10 = dtu10 + dt1*u0
+               dtu10_2 = dtu10_2 + dt1_2*u0
                tu01 = tu01 + t0*u1
                dtu01 = dtu01 + dt0*u1
+               dtu01_2 = dtu01_2 + dt0_2*u1
                tu20 = tu20 + t2*u0
                dtu20 = dtu20 + dt2*u0
+               dtu20_2 = dtu20_2 + dt2_2*u0
                tu11 = tu11 + t1*u1
                dtu11 = dtu11 + dt1*u1
+               dtu11_2 = dtu11_2 + dt1_2*u1
                tu02 = tu02 + t0*u2
                dtu02 = dtu02 + dt0*u2
+               dtu02_2 = dtu02_2 + dt0_2*u2
                tu30 = tu30 + t3*u0
                dtu30 = dtu30 + dt3*u0
+               dtu30_2 = dtu30_2 + dt3_2*u0
                tu21 = tu21 + t2*u1
                dtu21 = dtu21 + dt2*u1
+               dtu21_2 = dtu21_2 + dt2_2*u1
                tu12 = tu12 + t1*u2
                dtu12 = dtu12 + dt1*u2
+               dtu12_2 = dtu12_2 + dt1_2*u2
                tu03 = tu03 + t0*u3
                dtu03 = dtu03 + dt0*u3
+               dtu03_2 = dtu03_2 + dt0_2*u3
             end do
 c           end of it2
             tuv000 = tuv000 + tu00*v0
             dtuv000 = dtuv000 + dtu00*v0
+            dtuv000_2 = dtuv000_2 + dtu00_2*v0
             tuv100 = tuv100 + tu10*v0
             dtuv100 = dtuv100 + dtu10*v0
+            dtuv100_2 = dtuv100_2 + dtu10_2*v0
             tuv010 = tuv010 + tu01*v0
             dtuv010 = dtuv010 + dtu01*v0
+            dtuv010_2 = dtuv010_2 + dtu01_2*v0
             tuv001 = tuv001 + tu00*v1
             dtuv001 = dtuv001 + dtu00*v1
+            dtuv001_2 = dtuv001_2 + dtu00_2*v1
             tuv200 = tuv200 + tu20*v0
             dtuv200 = dtuv200 + dtu20*v0
+            dtuv200_2 = dtuv200_2 + dtu20_2*v0
             tuv020 = tuv020 + tu02*v0
             dtuv020 = dtuv020 + dtu02*v0
+            dtuv020_2 = dtuv020_2 + dtu02_2*v0
             tuv002 = tuv002 + tu00*v2
             dtuv002 = dtuv002 + dtu00*v2
+            dtuv002_2 = dtuv002_2 + dtu00_2*v2
             tuv110 = tuv110 + tu11*v0
             dtuv110 = dtuv110 + dtu11*v0
+            dtuv110_2 = dtuv110_2 + dtu11_2*v0
             tuv101 = tuv101 + tu10*v1
             dtuv101 = dtuv101 + dtu10*v1
+            dtuv101_2 = dtuv101_2 + dtu10_2*v1
             tuv011 = tuv011 + tu01*v1
             dtuv011 = dtuv011 + dtu01*v1
+            dtuv011_2 = dtuv011_2 + dtu01_2*v1
             tuv300 = tuv300 + tu30*v0
             dtuv300 = dtuv300 + dtu30*v0
+            dtuv300_2 = dtuv300_2 + dtu30_2*v0
             tuv030 = tuv030 + tu03*v0
             dtuv030 = dtuv030 + dtu03*v0
+            dtuv030_2 = dtuv030_2 + dtu03_2*v0
             tuv003 = tuv003 + tu00*v3
             dtuv003 = dtuv003 + dtu00*v3
+            dtuv003_2 = dtuv003_2 + dtu00_2*v3
             tuv210 = tuv210 + tu21*v0
             dtuv210 = dtuv210 + dtu21*v0
+            dtuv210_2 = dtuv210_2 + dtu21_2*v0
             tuv201 = tuv201 + tu20*v1
             dtuv201 = dtuv201 + dtu20*v1
+            dtuv201_2 = dtuv201_2 + dtu20_2*v1
             tuv120 = tuv120 + tu12*v0
             dtuv120 = dtuv120 + dtu12*v0
+            dtuv120_2 = dtuv120_2 + dtu12_2*v0
             tuv021 = tuv021 + tu02*v1
             dtuv021 = dtuv021 + dtu02*v1
+            dtuv021_2 = dtuv021_2 + dtu02_2*v1
             tuv102 = tuv102 + tu10*v2
             dtuv102 = dtuv102 + dtu10*v2
+            dtuv102_2 = dtuv102_2 + dtu10_2*v2
             tuv012 = tuv012 + tu01*v2
             dtuv012 = dtuv012 + dtu01*v2
+            dtuv012_2 = dtuv012_2 + dtu01_2*v2
             tuv111 = tuv111 + tu11*v1
             dtuv111 = dtuv111 + dtu11*v1
+            dtuv111_2 = dtuv111_2 + dtu11_2*v1
          end do
 c        end of it3
 c
 c        mpole of atom/isite calc from grid
          fphi(1,isite) = tuv000
          dfphidci(1,isite) = dtuv000
-c        write(*,*) isite,fphi(1,isite),dfphidci(1,isite)
+         dfphidci2(1,isite) = dtuv000_2
          fphi(2,isite) = tuv100
          dfphidci(2,isite) = dtuv100
+         dfphidci2(2,isite) = dtuv100_2
          fphi(3,isite) = tuv010
          dfphidci(3,isite) = dtuv010
+         dfphidci2(3,isite) = dtuv010_2
          fphi(4,isite) = tuv001
          dfphidci(4,isite) = dtuv001
+         dfphidci2(4,isite) = dtuv001_2
          fphi(5,isite) = tuv200
          dfphidci(5,isite) = dtuv200
+         dfphidci2(5,isite) = dtuv200_2
          fphi(6,isite) = tuv020
          dfphidci(6,isite) = dtuv020
+         dfphidci2(6,isite) = dtuv020_2
          fphi(7,isite) = tuv002
          dfphidci(7,isite) = dtuv002
+         dfphidci2(7,isite) = dtuv002_2
          fphi(8,isite) = tuv110
          dfphidci(8,isite) = dtuv110
+         dfphidci2(8,isite) = dtuv110_2
          fphi(9,isite) = tuv101
          dfphidci(9,isite) = dtuv101
+         dfphidci2(9,isite) = dtuv101_2
          fphi(10,isite) = tuv011
          dfphidci(10,isite) = dtuv011
+         dfphidci2(10,isite) = dtuv011_2
          fphi(11,isite) = tuv300
          dfphidci(11,isite) = dtuv300
+         dfphidci2(11,isite) = dtuv300_2
          fphi(12,isite) = tuv030
          dfphidci(12,isite) = dtuv030
+         dfphidci2(12,isite) = dtuv030_2
          fphi(13,isite) = tuv003
          dfphidci(13,isite) = dtuv003
+         dfphidci2(13,isite) = dtuv003_2
          fphi(14,isite) = tuv210
          dfphidci(14,isite) = dtuv210
+         dfphidci2(14,isite) = dtuv210_2
          fphi(15,isite) = tuv201
          dfphidci(15,isite) = dtuv201
+         dfphidci2(15,isite) = dtuv201_2
          fphi(16,isite) = tuv120
          dfphidci(16,isite) = dtuv120
+         dfphidci2(16,isite) = dtuv120_2
          fphi(17,isite) = tuv021
          dfphidci(17,isite) = dtuv021
+         dfphidci2(17,isite) = dtuv021_2
          fphi(18,isite) = tuv102
          dfphidci(18,isite) = dtuv102
+         dfphidci2(18,isite) = dtuv102_2
          fphi(19,isite) = tuv012
          dfphidci(19,isite) = dtuv012
+         dfphidci2(19,isite) = dtuv012_2
          fphi(20,isite) = tuv111
          dfphidci(20,isite) = dtuv111
-c        dfphitemp = dfphitemp + dfphidci(1,isite)
+         dfphidci2(20,isite) = dtuv111_2
 c        write(*,*) tuv000,tu00,t0
 c        write(*,*) dtuv000,dtu00,dt0
+c        write(*,*) dtuv000_2,dtu00_2,dt0_2
       end do
 c     end of isite
 c
@@ -1850,7 +1941,6 @@ c
 !$OMP END DO
 !$OMP END PARALLEL
 
-c     write(*,*) "dfphitemp = ",dfphitemp
       deallocate (dfphidqg)
 
       write(*,*) "End of fphi_mpoleCT"
