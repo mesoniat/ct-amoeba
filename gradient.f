@@ -495,7 +495,7 @@ c hydrogen charges
 c for testing dedci
       dq = 0.0d0
       write(*,*) "dq = ",dq
-      rpole(1,4) = rpole(1,4) + dq
+      rpole(1,4) = rpole(1,4) - dq
 
       if(n.le.6) then
       write(*,*) "New charges : "
@@ -574,11 +574,11 @@ c     open(unit=33,file="extraCT.dat",status='new',action='write')
 c dedci already calculated, does not change within this routine
       write(*,*) "ect1 subroutine"
       if(n.le.6) then
-c       write(*,*) "Pre-CT: dem_x, dem_y, dem_z"
+        write(*,*) "Pre-CT: dem_x, dem_y, dem_z"
         do i=1,n
-          write(*,*) dedci(i)
+c         write(*,*) dedci(i)
 c         dedci(i) = 0.0d0
-c         write(*,*) dem(1,i),dem(2,i),dem(3,i) 
+          write(*,*) dem(1,i),dem(2,i),dem(3,i) 
         enddo
 
 c       write(*,*) "CT variables :"
@@ -890,12 +890,12 @@ c check virial
       write(*,*) "Ect = ",ect
       em = em + ect
 
-c     if(n.le.6) then
-c       write(*,*) "Post-CT: dem_x, dem_y, dem_z"
-c       do i=1,n
-c         write(*,*) dem(1,i),dem(2,i),dem(3,i)
-c       enddo
-c     endif
+      if(n.le.6) then
+        write(*,*) "Post-CT: dem_x, dem_y, dem_z"
+        do i=1,n
+          write(*,*) dem(1,i),dem(2,i),dem(3,i)
+        enddo
+      endif
 
 c     deallocate (nacti(n))
 c     deallocate (ndcti(n))

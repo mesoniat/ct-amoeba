@@ -5382,18 +5382,29 @@ c
 
 c DCT energy derivatives dE/dqi
 c    includes e, ei, erl, erli
-               dedci(i) = dedci(i) 
-     & + f*(bn(0)*ck + bn(1)*(-sc(4))
-     & + bn(2)*sc(6) + 0.5d0*bn(1)*(-sci(4))) 
-               depdci(i) = depdci(i) 
-     & - f*((rr1*ck+rr3*(-sc(4))+rr5*sc(6))*(1.0d0-mscale(kk)) 
-     & + 0.5d0*rr3*(-sci(4))*psc3 )
-               dedci(k) = dedci(k) 
-     & + f*(bn(0)*ci + bn(1)*(sc(3))
-     & + bn(2)*sc(5) + 0.5d0*bn(1)*(sci(3)))
-               depdci(k) = depdci(k) 
-     & - f*((rr1*ci+rr3*(sc(3))+rr5*sc(5))*(1.0d0-mscale(kk)) 
-     & + 0.5d0*rr3*(sci(3))*psc3 )
+               dedci(i) = dedci(i) + f*(bn(0)*ck - bn(1)*sc(4) 
+     & + bn(2)*sc(6) - (1.0d0-mscale(kk))*(rr1*ck -rr3*sc(4) 
+     & + rr5*sc(6)))
+               dedci(k) = dedci(k) + f*(bn(0)*ci + bn(1)*sc(3)
+     & + bn(2)*sc(5) - (1.0d0-mscale(kk))*(rr1*ci + rr3*sc(3)
+     & + rr5*sc(5)))
+               depdci(i) = depdci(i) + 0.50d0*f
+     & *sci(4)*(rr3*psc3 - bn(1))
+               depdci(i) = depdci(i) + 0.50d0*f
+     & *sci(3)*(bn(1) - rr3*psc3)
+
+c              dedci(i) = dedci(i) 
+c    & + f*(bn(0)*ck + bn(1)*(-sc(4))
+c    & + bn(2)*sc(6) + 0.5d0*bn(1)*(-sci(4))) 
+c              depdci(i) = depdci(i) 
+c    & - f*((rr1*ck+rr3*(-sc(4))+rr5*sc(6))*(1.0d0-mscale(kk)) 
+c    & + 0.5d0*rr3*(-sci(4))*psc3 )
+c              dedci(k) = dedci(k) 
+c    & + f*(bn(0)*ci + bn(1)*(sc(3))
+c    & + bn(2)*sc(5) + 0.5d0*bn(1)*(sci(3)))
+c              depdci(k) = depdci(k) 
+c    & - f*((rr1*ci+rr3*(sc(3))+rr5*sc(5))*(1.0d0-mscale(kk)) 
+c    & + 0.5d0*rr3*(sci(3))*psc3 )
 c MES need depduind here, then duinddci
 c              write(*,*) i,"  dedci(i)    ",dedci(i)
 c              write(*,*) k,"  dedci(k)    ",dedci(k)
@@ -6027,6 +6038,7 @@ c MES
       real*8, allocatable :: test2(:)
       real*8, allocatable :: dfphidci(:,:)
       real*8, allocatable :: dfphidci2(:,:)
+      real*8, allocatable :: dfphidciX(:,:,:)
       real*8, allocatable :: fphid(:,:)
       real*8, allocatable :: fphip(:,:)
       real*8, allocatable :: fphidp(:,:)
@@ -6067,6 +6079,7 @@ c
       allocate (cphi(10,npole))
       allocate (dfphidci(20,npole))
       allocate (dfphidci2(20,npole))
+      allocate (dfphidciX(20,npole,npole))
       allocate (test(npole))
       allocate (test2(npole))
       allocate (dqgrpci(2,nfft1,nfft2,nfft3,npole))
@@ -6080,6 +6093,9 @@ c
         do k = 1,20
           dfphidci(k,i) = 0.0d0
           dfphidci2(k,i) = 0.0d0
+          do j = 1,npole
+            dfphidciX(k,i,j) = 0.0d0
+          end do
 c         write(*,*) i,dfphidci(1,i)
         end do
         do j = 1,3
@@ -6563,7 +6579,7 @@ c restore qgrid
 
 c     call fphi_mpole (fphi)
       write(*,*) "Calling fphi_mpoleCT"
-      call fphi_mpoleCT (fphi,dfphidci,dfphidci2)
+      call fphi_mpoleCT (fphi,dfphidci,dfphidci2,dfphidciX)
       write(*,*) "back in emrecip"
       do i = 1, npole
 c        write(*,*) i,fphi(1,i),dfphidci(1,i)
@@ -6571,6 +6587,9 @@ c        write(*,*) i,fphi(1,i),dfphidci(1,i)
             fphi(j,i) = electric * fphi(j,i)
             dfphidci(j,i) = electric*dfphidci(j,i)
             dfphidci2(j,i) = electric*dfphidci2(j,i)
+            do k = 1 , npole
+              dfphidciX(j,i,k) = electric*dfphidciX(j,i,k)
+            end do
             write(*,*) i,j
             write(*,*) fphi(j,i),dfphidci(j,i),dfphidci2(j,i)
          end do
@@ -6587,6 +6606,7 @@ c       but the calculation occurs in real space)
 c      em is recip energy, which is added to direct and self later
 c
 c PROBLEM
+c  add dfphidciX !!
       write(*,*) "energy and dedci calc. em = ",em
       e = 0.0d0
       do i = 1, npole
@@ -6971,6 +6991,7 @@ c
       deallocate (cphi)
       deallocate (dfphidci)
       deallocate (dfphidci2)
+      deallocate (dfphidciX)
       deallocate (dqgrpci)
       deallocate (dqgrpci2)
       deallocate (test)
