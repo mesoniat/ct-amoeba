@@ -258,20 +258,9 @@ c
       if (use_geom)  call egeom1
       if (use_extra)  call extra1
 
-c     write(*,*) "empole done : dem(i) :"
-c     do i = 1, n
-c        write(*,*) dem(1,i),dem(2,i),dem(3,i)
-c     end do
-
 c DCT gets charge transfer contribution to forces
 c        and adds charge transfer energy to em
       if (use_crgtr) call ect1
-
-c     write(*,*) "Final dem, after CT"
-c     do i = 1, n
-c        write(*,*) dem(1,i),dem(2,i),dem(3,i)
-c     end do
-
 c
 c     sum up to get the total energy and first derivatives
       write(*,*) "Summing energy and deriv. contributions"
@@ -385,8 +374,13 @@ c     end do
            dnacti(i) = 0.d0
            dndcti(i) = 0.d0
          end if
-         dedci(i) = 0.d0
-         depdci(i) = 0.d0
+         dedci(i) = 0.0d0
+         dedciX(i) = 0.0d0
+         depdciX(i) = 0.0d0
+         do j = 1,n
+           dedciXX(i,j) = 0.0d0
+         end do
+         depdci(i) = 0.0d0
       enddo
 
 c get hydrogen bonds: nacti = number accepted
@@ -493,7 +487,7 @@ c hydrogen charges
       enddo
  
 c for testing dedci
-      dq = 0.0d0
+      dq = 0.01d0
       write(*,*) "dq = ",dq
       rpole(1,4) = rpole(1,4) - dq
 
@@ -573,7 +567,7 @@ c     open(unit=33,file="extraCT.dat",status='new',action='write')
 
 c dedci already calculated, does not change within this routine
       write(*,*) "ect1 subroutine"
-      if(n.le.6) then
+c     if(n.le.6) then
         write(*,*) "Pre-CT: dem_x, dem_y, dem_z"
         do i=1,n
 c         write(*,*) dedci(i)
@@ -583,7 +577,7 @@ c         dedci(i) = 0.0d0
 
 c       write(*,*) "CT variables :"
 c       write(*,*) "xna            dxna            zr            rr "
-      endif
+c     endif
 
 c check virial
       goto 123
@@ -618,7 +612,7 @@ c if neighbor is also an oxygen, calculate distance
                   zr = z(j) - z(i)
                   call image (xr,yr,zr)
                   rr = xr*xr + yr*yr + zr*zr
-                  write(*,*) "rr = ",rr
+                  write(*,*) i,j,"rr = ",rr
 
                   if(rr.lt.(rct2+1.200)**2) then
 c check if water with oxygen atom j donates hydrogen bond to i
@@ -660,18 +654,12 @@ c MES : This only affects the 2 atoms in the HB
      & +dedci(i+2)*zdqt(3,3))*dxna*zr/rr
 
 c                          if (i.eq.4) then
-c                          write(*,*) "dqdr in x analytic = ",
-c    & (zdqt(1,3)+zdqt(2,3)+zdqt(3,3))*dxna*xr/rr
-c                          write(*,*) "dqdr in y analytic = ",
-c    & (zdqt(1,3)+zdqt(2,3)+zdqt(3,3))*dxna*yr/rr
-c                          write(*,*) "dqdr in z analytic = ",
-c    & (zdqt(1,3)+zdqt(2,3)+zdqt(3,3))*dxna*zr/rr
-                           write(*,*) "dEct/dr in x = ",
-     & ((muct+etact*xna*dqt)*dqt)*dxna*xr/rr
-                           write(*,*) "dEct/dr in y = ",
-     & ((muct+etact*xna*dqt)*dqt)*dxna*yr/rr
-                           write(*,*) "dEct/dr in z = ",
-     & ((muct+etact*xna*dqt)*dqt)*dxna*zr/rr
+c                          write(*,*) "dEct/dr in x = ",
+c    & ((muct+etact*xna*dqt)*dqt)*dxna*xr/rr
+c                          write(*,*) "dEct/dr in y = ",
+c    & ((muct+etact*xna*dqt)*dqt)*dxna*yr/rr
+c                          write(*,*) "dEct/dr in z = ",
+c    & ((muct+etact*xna*dqt)*dqt)*dxna*zr/rr
 c                          end if
 
 
@@ -733,98 +721,49 @@ c ect here only (not above) to avoid double counting
      & +0.5d0*etact*(xna*dqt)**2
 
 c dE/dq + dE_ct/dr
-c                          dem(1,i+l) = dem(1,i+l)
-c    & +(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
-c    & +dedci(i+2)*zdqt(3,l+1))*dxna*xr/rr
-c                          dem(1,i+l) = dem(1,i+l)
-c    & +((muct+etact*xna*dqt)*dqt
-c    & )*dxna*xr/rr
-c                          dem(2,i+l) = dem(2,i+l)
-c    & +(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
-c    & +dedci(i+2)*zdqt(3,l+1))*dxna*yr/rr
-c                          dem(2,i+l) = dem(2,i+l)
-c    & +((muct+etact*xna*dqt)*dqt
-c    & )*dxna*yr/rr
-c                          dem(3,i+l) = dem(3,i+l)
-c    & +(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
-c    & +dedci(i+2)*zdqt(3,l+1))*dxna*zr/rr
-c                          dem(3,i+l) = dem(3,i+l)
-c    & +((muct+etact*xna*dqt)*dqt
-c    & )*dxna*zr/rr
-c                          dem(1,j) = dem(1,j)
-c    & -(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
-c    & +dedci(i+2)*zdqt(3,l+1))*dxna*xr/rr
-c                          dem(1,j) = dem(1,j)
-c    & -((muct+etact*xna*dqt)*dqt
-c    & )*dxna*xr/rr
-c                          dem(2,j) = dem(2,j)
-c    & -(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
-c    & +dedci(i+2)*zdqt(3,l+1))*dxna*yr/rr
-c                          dem(2,j) = dem(2,j)
-c    & -((muct+etact*xna*dqt)*dqt
-c    & )*dxna*yr/rr
-c                          dem(3,j) = dem(3,j)
-c    & -(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
-c    & +dedci(i+2)*zdqt(3,l+1))*dxna*zr/rr
-c                          dem(3,j) = dem(3,j)
-c    & -((muct+etact*xna*dqt)*dqt
-c    & )*dxna*zr/rr
+             dem(1,i+l) = dem(1,i+l)
+     &+(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
+     & +dedci(i+2)*zdqt(3,l+1)
+     & +(muct+etact*xna*dqt)*dqt
+     &)*dxna*xr/rr
+             dem(2,i+l) = dem(2,i+l)
+     &+(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
+     & +dedci(i+2)*zdqt(3,l+1)
+     & +(muct+etact*xna*dqt)*dqt
+     &)*dxna*yr/rr
+             dem(3,i+l) = dem(3,i+l)
+     &+(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
+     & +dedci(i+2)*zdqt(3,l+1)
+     & +(muct+etact*xna*dqt)*dqt
+     &)*dxna*zr/rr
+             dem(1,j) = dem(1,j)
+     &-(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
+     & +dedci(i+2)*zdqt(3,l+1)
+     & +(muct+etact*xna*dqt)*dqt
+     &)*dxna*xr/rr
+             dem(2,j) = dem(2,j)
+     &-(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
+     & +dedci(i+2)*zdqt(3,l+1)
+     & +(muct+etact*xna*dqt)*dqt
+     &)*dxna*yr/rr
+             dem(3,j) = dem(3,j)
+     &-(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
+     & +dedci(i+2)*zdqt(3,l+1)
+     & +(muct+etact*xna*dqt)*dqt
+     &)*dxna*zr/rr
 
-                           dem(1,i+l) = dem(1,i+l)
-     & +(dedci(i)*zdqt(1,l)+dedci(i+1)*zdqt(2,l)
-     & +dedci(i+2)*zdqt(3,l))*dxna*xr/rr
-                           dem(1,i+l) = dem(1,i+l)
-     & +((muct+etact*xna*dqt)*dqt
-     & )*dxna*xr/rr
-                           dem(2,i+l) = dem(2,i+l)
-     & +(dedci(i)*zdqt(1,l)+dedci(i+1)*zdqt(2,l)
-     & +dedci(i+2)*zdqt(3,l))*dxna*yr/rr
-                           dem(2,i+l) = dem(2,i+l)
-     & +((muct+etact*xna*dqt)*dqt
-     & )*dxna*yr/rr
-                           dem(3,i+l) = dem(3,i+l)
-     & +(dedci(i)*zdqt(1,l)+dedci(i+1)*zdqt(2,l)
-     & +dedci(i+2)*zdqt(3,l))*dxna*zr/rr
-                           dem(3,i+l) = dem(3,i+l)
-     & +((muct+etact*xna*dqt)*dqt
-     & )*dxna*zr/rr
-                           dem(1,j) = dem(1,j)
-     & -(dedci(i)*zdqt(1,l)+dedci(i+1)*zdqt(2,l)
-     & +dedci(i+2)*zdqt(3,l))*dxna*xr/rr
-                           dem(1,j) = dem(1,j)
-     & -((muct+etact*xna*dqt)*dqt
-     & )*dxna*xr/rr
-                           dem(2,j) = dem(2,j)
-     & -(dedci(i)*zdqt(1,l)+dedci(i+1)*zdqt(2,l)
-     & +dedci(i+2)*zdqt(3,l))*dxna*yr/rr
-                           dem(2,j) = dem(2,j)
-     & -((muct+etact*xna*dqt)*dqt
-     & )*dxna*yr/rr
-                           dem(3,j) = dem(3,j)
-     & -(dedci(i)*zdqt(1,l)+dedci(i+1)*zdqt(2,l)
-     & +dedci(i+2)*zdqt(3,l))*dxna*zr/rr
-                           dem(3,j) = dem(3,j)
-     & -((muct+etact*xna*dqt)*dqt
-     & )*dxna*zr/rr
-
-c                          write(*,*) "dqdr in x analytic = ",
-c    & (zdqt(1,3)+zdqt(2,3)+zdqt(3,3))*dxna*xr/rr
+                           write(*,*) "dqdr in x analytic = ",
+     & (zdqt(1,3)+zdqt(2,3)+zdqt(3,3))*dxna*xr/rr
 c                          write(*,*) "dqdr in y analytic = ",
 c    & (zdqt(1,3)+zdqt(2,3)+zdqt(3,3))*dxna*yr/rr
 c                          write(*,*) "dqdr in z analytic = ",
 c    & (zdqt(1,3)+zdqt(2,3)+zdqt(3,3))*dxna*zr/rr
-                           write(*,*) "dqdr in x analytic = ",
-     & (zdqt(1,3)+zdqt(2,3)+zdqt(3,3))*dxna*xr/rr
-                           write(*,*) "dqdr in y analytic = ",
-     & (zdqt(1,3)+zdqt(2,3)+zdqt(3,3))*dxna*yr/rr
-                           write(*,*) "dqdr in z analytic = ",
-     & (zdqt(1,3)+zdqt(2,3)+zdqt(3,3))*dxna*zr/rr
                            write(*,*) "dEct/dr in x = ",
      & ((muct+etact*xna*dqt)*dqt)*dxna*xr/rr
-                           write(*,*) "dEct/dr in y = ",
-     & ((muct+etact*xna*dqt)*dqt)*dxna*yr/rr
-                           write(*,*) "dEct/dr in z = ",
-     & ((muct+etact*xna*dqt)*dqt)*dxna*zr/rr
+c                          write(*,*) "dEct/dr in y = ",
+c    & ((muct+etact*xna*dqt)*dqt)*dxna*yr/rr
+c                          write(*,*) "dEct/dr in z = ",
+c    & ((muct+etact*xna*dqt)*dqt)*dxna*zr/rr
 
                            vir(1,1) = vir(1,1)
      & -xr*(dedci(i)*zdqt(1,3)+dedci(i+1)*zdqt(2,3)
@@ -887,15 +826,15 @@ c check virial
       enddo
 456   continue
 
-      write(*,*) "Ect = ",ect
       em = em + ect
+      write(*,*) "Ect = ",ect,"    total em = ",em
 
-      if(n.le.6) then
+c     if(n.le.6) then
         write(*,*) "Post-CT: dem_x, dem_y, dem_z"
         do i=1,n
           write(*,*) dem(1,i),dem(2,i),dem(3,i)
         enddo
-      endif
+c     endif
 
 c     deallocate (nacti(n))
 c     deallocate (ndcti(n))

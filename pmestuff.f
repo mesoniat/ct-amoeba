@@ -212,7 +212,7 @@ c
       logical posx,posy,posz
       logical midx,midy,midz
 c
-      write(*,*) "table_fill"
+c     write(*,*) "table_fill"
 c
 c     zero out the PME table marking chunks per site
 c
@@ -504,8 +504,8 @@ c
       real*8 term0,term1,term2
       real*8 fmp(10,*)
 c
-      write(*,*) "Entered grid_mpole"
-      write(*,*) "    nchunk = ",nchunk
+c     write(*,*) "Entered grid_mpole"
+c     write(*,*) "    nchunk = ",nchunk
 c
 c     zero out the particle mesh Ewald charge grid
 c
@@ -518,8 +518,6 @@ c
                  dqgrdci(1,i,j,k,isite) = 0.0d0
                  dqgrdci(2,i,j,k,isite) = 0.0d0
                end do
-               dqgrdci2(1,i,j,k) = 0.0d0
-               dqgrdci2(2,i,j,k) = 0.0d0
             end do
          end do
       end do
@@ -591,14 +589,13 @@ c
                         qgrid(1,i,j,k) = qgrid(1,i,j,k) + term0*t0
      &                                      + term1*t1 + term2*t2
 c MES    dfmpdci = 1
-                        dqgrdci2(1,i,j,k) = dqgrdci2(1,i,j,k)+u0*v0*t0
                         dqgrdci(1,i,j,k,isite) = dqgrdci(1,i,j,k,isite) 
      & + u0*v0*t0
-                        if ( i.eq.11 .and. j.eq.8 .and. k.eq.7 ) then
-                          write(*,*) i,j,k,isite
-                          write(*,*) qgrid(1,i,j,k),
-     & dqgrdci2(1,i,j,k), dqgrdci(1,i,j,k,isite)
-                        endif
+c                       if ( i.eq.11 .and. j.eq.8 .and. k.eq.7 ) then
+c                         write(*,*) i,j,k,isite
+c                         write(*,*) qgrid(1,i,j,k),
+c    & dqgrdci2(1,i,j,k), dqgrdci(1,i,j,k,isite)
+c                       endif
                      end do
                   end do
                end do
@@ -625,7 +622,7 @@ c     end do
 c     write(*,*) "11,8,7",qgrid(1,11,8,7),dqgrdci(1,11,8,7)
 
 
-      write(*,*) "Done with grid_mpole"
+c     write(*,*) "Done with grid_mpole"
       return
       end
 c
@@ -641,7 +638,8 @@ c     "grid_uind" places the fractional induced dipoles onto the
 c     particle mesh Ewald grid
 c
 c
-      subroutine grid_uind (fuind,fuinp)
+c     subroutine grid_uind (fuind,fuinp)
+      subroutine grid_uind (fuind,fuinp,dfuinddci,dfuinpdci)
       use sizes
       use atoms
       use chunks
@@ -650,19 +648,32 @@ c
       implicit none
       integer i,j,k,m
       integer ii,jj,kk
-      integer ichk,isite,iatm
+      integer ichk,isite,jsite,iatm
       integer offsetx,offsety
       integer offsetz
       integer cid(3)
       integer nearpt(3)
       integer abound(6)
       integer cbound(6)
+      real*8, allocatable :: dterm01dci(:)
+      real*8, allocatable :: dterm11dci(:)
+      real*8, allocatable :: dterm02dci(:)
+      real*8, allocatable :: dterm12dci(:)
+      real*8, allocatable :: dqgrdciX(:,:,:,:,:,:)
       real*8 v0,u0,t0
       real*8 v1,u1,t1
       real*8 term01,term11
       real*8 term02,term12
       real*8 fuind(3,*)
       real*8 fuinp(3,*)
+      real*8 dfuinddci(3,npole,*)
+      real*8 dfuinpdci(3,npole,*)
+
+      allocate(dterm01dci(npole))
+      allocate(dterm11dci(npole))
+      allocate(dterm02dci(npole))
+      allocate(dterm12dci(npole))
+      allocate(dqgrdciX(2,nfft1,nfft2,nfft3,npole,npole))
 c
       write(*,*) "Entered grid_uind"
 c
@@ -673,6 +684,10 @@ c
             do i = 1, nfft1
                qgrid(1,i,j,k) = 0.0d0
                qgrid(2,i,j,k) = 0.0d0
+               do isite = 1, npole
+                 dqgrdci(1,i,j,k,isite) = 0.0d0
+                 dqgrdci(2,i,j,k,isite) = 0.0d0
+               end do
             end do
          end do
       end do
@@ -733,12 +748,18 @@ c
      &                           + fuinp(3,isite)*u0*v1
                      term12 = fuinp(1,isite)*u0*v0
 c MES
-c                    dterm01dci = dfuinddci(2,isite)*u1*v0
-c    &                           + dfuinddci(3,isite)*u0*v1
-c                    dterm11dci = dfuinddci(1,isite)*u0*v0
-c                    dterm02dci = dfuinpdci(2,isite)*u1*v0
-c    &                           + dfuinpdci(3,isite)*u0*v1
-c                    dterm12dci = dfuinpdci(1,isite)*u0*v0
+                     do jsite = 1, npole
+                        dterm01dci(jsite) = 
+     &                             dfuinddci(2,isite,jsite)*u1*v0
+     &                           + dfuinddci(3,isite,jsite)*u0*v1
+                        dterm11dci(jsite) = 
+     &                             dfuinddci(1,isite,jsite)*u0*v0
+                        dterm02dci(jsite) = 
+     &                             dfuinpdci(2,isite,jsite)*u1*v0
+     &                           + dfuinpdci(3,isite,jsite)*u0*v1
+                        dterm12dci(jsite) = 
+     &                             dfuinpdci(1,isite,jsite)*u0*v0
+                     end do
                      do ii = abound(1), abound(2)
                         i = ii
                         m = i + offsetx
@@ -750,12 +771,25 @@ c                    dterm12dci = dfuinpdci(1,isite)*u0*v0
                         qgrid(2,i,j,k) = qgrid(2,i,j,k) + term02*t0
      &                                      + term12*t1
 c MES
-c                       dqgdci(1,i,j,k) = dqgdci(1,i,j,k) 
-c    &                                      + dterm01dci*t0
-c    &                                      + dterm11dci*t1
-c                       dqgdci(2,i,j,k) = dqgdci(2,i,j,k) 
-c    &                                      + dterm02dci*t0
-c    &                                      + dterm12dci*t1
+                        do jsite = 1, npole
+                           dqgrdci(1,i,j,k,isite) = 
+     & dqgrdci(1,i,j,k,isite)
+     & + dterm01dci(jsite)*t0 + dterm11dci(jsite)*t1
+                           dqgrdci(2,i,j,k,isite) =
+     & dqgrdci(2,i,j,k,isite)
+     & + dterm02dci(jsite)*t0 + dterm12dci(jsite)*t1
+
+                           dqgrdciX(1,i,j,k,isite,jsite) = 
+     & + dterm01dci(jsite)*t0 + dterm11dci(jsite)*t1
+                           dqgrdciX(2,i,j,k,isite,jsite) = 
+     & + dterm02dci(jsite)*t0 + dterm12dci(jsite)*t1
+                        end do
+                        if (i.eq.10 .and. j.eq.8 .and. k.eq.7) then
+                          write(*,*) i,j,k,isite
+                          write(*,*) term01,dterm01dci(4)
+                          write(*,*) qgrid(1,i,j,k),
+     & dqgrdci(1,i,j,k,isite),dqgrdciX(2,i,j,k,isite,4)
+                        end if
                      end do
                   end do
                end do
@@ -767,6 +801,13 @@ c     end OpenMP directive for the major loop structure
 c
 !$OMP END DO
 !$OMP END PARALLEL
+
+      deallocate(dterm01dci)
+      deallocate(dterm11dci)
+      deallocate(dterm02dci)
+      deallocate(dterm12dci)
+      deallocate(dqgrdciX)
+
       write(*,*) "Done with grid_uind"
       return
       end
@@ -854,7 +895,7 @@ c
       real*8 fphi(20,*)
 c
       write(*,*) "Entered fphi_mpole"
-      write(*,*) "bsorder = ",bsorder
+c     write(*,*) "bsorder = ",bsorder
 c
 c     set OpenMP directives for the major loop structure
 c
@@ -1061,7 +1102,6 @@ c
 c
 c     extract the induced dipole field at each site
 c
-c MES : a few deriv.s below
       do isite = 1, npole
          iatm = ipole(isite)
          igrd0 = igrid(1,iatm)
@@ -1157,11 +1197,9 @@ c MES : a few deriv.s below
                   tq_1 = qgrid(1,i,j,k)
                   tq_2 = qgrid(2,i,j,k)
                   t0_1 = t0_1 + tq_1*thetai1(1,it1,iatm)
-c                 dt0_1dqg = dt0_1dqg + thetai1(1,it1,iatm)
                   t1_1 = t1_1 + tq_1*thetai1(2,it1,iatm)
                   t2_1 = t2_1 + tq_1*thetai1(3,it1,iatm)
                   t0_2 = t0_2 + tq_2*thetai1(1,it1,iatm)
-c                 dt0_2dqg = dt0_2dqg + thetai1(1,it1,iatm)
                   t1_2 = t1_2 + tq_2*thetai1(2,it1,iatm)
                   t2_2 = t2_2 + tq_2*thetai1(3,it1,iatm)
                   t3 = t3 + (tq_1+tq_2)*thetai1(4,it1,iatm)
@@ -1179,11 +1217,9 @@ c                 dt0_2dqg = dt0_2dqg + thetai1(1,it1,iatm)
                tu11_2 = tu11_2 + t1_2*u1
                tu02_2 = tu02_2 + t0_2*u2
                t0 = t0_1 + t0_2
-c              dt0dqg = dt0_1dqg + dt0_2dqg
                t1 = t1_1 + t1_2
                t2 = t2_1 + t2_2
                tu00 = tu00 + t0*u0
-c              dtu00dqg = dtu00dqg + dt0dqg*u0
                tu10 = tu10 + t1*u0
                tu01 = tu01 + t0*u1
                tu20 = tu20 + t2*u0
@@ -1213,7 +1249,6 @@ c              dtu00dqg = dtu00dqg + dt0dqg*u0
             tuv101_2 = tuv101_2 + tu10_2*v1
             tuv011_2 = tuv011_2 + tu01_2*v1
             tuv000 = tuv000 + tu00*v0
-c           dtuv000dqg = dtuv000dqg + dtu00dqg*v0
             tuv100 = tuv100 + tu10*v0
             tuv010 = tuv010 + tu01*v0
             tuv001 = tuv001 + tu00*v1
@@ -1253,8 +1288,6 @@ c           dtuv000dqg = dtuv000dqg + dtu00dqg*v0
          fdip_phi2(9,isite) = tuv101_2
          fdip_phi2(10,isite) = tuv011_2
          fdip_sum_phi(1,isite) = tuv000
-c MES
-c        dfdip_sum_phidqg(1,isite) = dtuv000dqg
          fdip_sum_phi(2,isite) = tuv100
          fdip_sum_phi(3,isite) = tuv010
          fdip_sum_phi(4,isite) = tuv001
@@ -1305,11 +1338,11 @@ c
       real*8 cmp(10,*)
       real*8 fmp(10,*)
 c
-      write(*,*) "Entered cmp_to_fmp"
+c     write(*,*) "Entered cmp_to_fmp"
 c
 c     find the matrix to convert Cartesian to fractional
 c
-      write(*,*) "calling cart_to_frac"
+c     write(*,*) "calling cart_to_frac"
       call cart_to_frac (ctf)
 c     write(*,*) "    ctf(1,1) = ",ctf(1,1)
 c
@@ -1331,7 +1364,7 @@ c        write(*,*) i,fmp(1,i),cmp(1,i)
             end do
          end do
       end do
-      write(*,*) "End of cmp_to_fmp"
+c     write(*,*) "End of cmp_to_fmp"
       return
       end
 c
@@ -1418,46 +1451,67 @@ c     "fphi_to_cphi" transforms the reciprocal space potential from
 c     fractional to Cartesian coordinates
 c
 c
-      subroutine fphi_to_cphi (fphi,cphi)
+c     subroutine fphi_to_cphi (fphi,cphi)
+      subroutine fphi_to_cphi (fphi,cphi,dfphidciX,dcphidciX)
       use sizes
       use mpole
       implicit none
-      integer i,j,k
+      integer i,j,k,ii
       real*8 ftc(10,10)
       real*8 cphi(10,*)
       real*8 fphi(20,*)
+      real*8 dfphidciX(20,npole,*)
+      real*8 dcphidciX(20,npole,*)
 c
-      write(*,*) "Entered fphi_to_cphi"
+c     write(*,*) "Entered fphi_to_cphi"
 c
 c     find the matrix to convert fractional to Cartesian
 c
-      write(*,*) "Calling frac_to_cart"
+c     write(*,*) "Calling frac_to_cart"
       call frac_to_cart (ftc)
-c     write(*,*) "    ftc(1,1) = ",ftc(1,1)
 c
 c     apply the transformation to get the Cartesian potential
 c
       do i = 1, npole
          cphi(1,i) = ftc(1,1) * fphi(1,i)
-c        write(*,*) i,fphi(1,i),cphi(1,i)
-c MES
-c        dcphidqg(1,i) = ftc(1,1) * dfphidqg(1,i)
-c        write(*,*) "cphi(1,i) = ",cphi(1,i)
+         do ii = 1, npole
+           dcphidciX(1,i,ii) = ftc(1,1)*dfphidciX(1,i,ii)
+         end do
+
          do j = 2, 4
             cphi(j,i) = 0.0d0
+
             do k = 2, 4
                cphi(j,i) = cphi(j,i) + ftc(j,k)*fphi(k,i)
+               do ii = 1, npole
+                 dcphidciX(j,i,ii) = dcphidciX(j,i,ii)
+     & + ftc(j,k)*dfphidciX(k,i,ii)
+               end do
             end do
+c           end of k
+
          end do
+c        end of j
+
          do j = 5, 10
             cphi(j,i) = 0.0d0
+
             do k = 5, 10
                cphi(j,i) = cphi(j,i) + ftc(j,k)*fphi(k,i)
+               do ii = 1, npole
+                 dcphidciX(j,i,ii) = dcphidciX(j,i,ii)
+     & + ftc(j,k)*dfphidciX(k,i,ii)
+               end do
             end do
-         end do
-      end do
+c           end of k
 
-      write(*,*) "End of fphi_to_cphi"
+         end do
+c        end of j
+
+      end do
+c     end of i
+
+c     write(*,*) "End of fphi_to_cphi"
       return
       end
 c
@@ -1553,7 +1607,7 @@ c     "fphi_mpoleCT" extracts the permanent multipole potential from
 c     the particle mesh Ewald grid
 c
 c
-      subroutine fphi_mpoleCT (fphi,dfphidci,dfphidci2,dfphidciX)
+      subroutine fphi_mpoleCT (fphi,dfphidciX)
       use sizes
       use mpole
       use pme
@@ -1573,24 +1627,6 @@ c
       real*8 tuv101,tuv011,tuv300,tuv030
       real*8 tuv003,tuv210,tuv201,tuv120
       real*8 tuv021,tuv102,tuv012,tuv111
-
-      real*8 dt0,dt1,dt2,dt3
-      real*8 dtu00,dtu10,dtu01,dtu20,dtu11
-      real*8 dtu02,dtu21,dtu12,dtu30,dtu03
-      real*8 dtuv000,dtuv100,dtuv010,dtuv001
-      real*8 dtuv200,dtuv020,dtuv002,dtuv110
-      real*8 dtuv101,dtuv011,dtuv300,dtuv030
-      real*8 dtuv003,dtuv210,dtuv201,dtuv120
-      real*8 dtuv021,dtuv102,dtuv012,dtuv111
-
-      real*8 dt0_2,dt1_2,dt2_2,dt3_2
-      real*8 dtu00_2,dtu10_2,dtu01_2,dtu20_2,dtu11_2
-      real*8 dtu02_2,dtu21_2,dtu12_2,dtu30_2,dtu03_2
-      real*8 dtuv000_2,dtuv100_2,dtuv010_2,dtuv001_2
-      real*8 dtuv200_2,dtuv020_2,dtuv002_2,dtuv110_2
-      real*8 dtuv101_2,dtuv011_2,dtuv300_2,dtuv030_2
-      real*8 dtuv003_2,dtuv210_2,dtuv201_2,dtuv120_2
-      real*8 dtuv021_2,dtuv102_2,dtuv012_2,dtuv111_2
 
       real*8, allocatable :: xdt0(:)
       real*8, allocatable :: xdt1(:)
@@ -1627,22 +1663,13 @@ c
       real*8, allocatable :: xdtuv012(:)
       real*8, allocatable :: xdtuv111(:)
 
-      real*8 dtuv000dqg
-      real*8, allocatable :: dfphidqg(:,:)
-      real*8 dfphitemp
       real*8 fphi(20,*)
-      real*8 dfphidci(20,*)
-      real*8 dfphidci2(20,*)
       real*8 dfphidciX(20,npole,npole)
 c
-      write(*,*) "Entered fphi_mpoleCT"
+c     write(*,*) "Entered fphi_mpoleCT"
 c     write(*,*) "bsorder = ",bsorder
 c     write(*,*) ""
 
-      allocate (dfphidqg(1,npole))
-      dfphitemp = 0.0d0
-c     write(*,*) "dtuv000, dtu00, dt0"
-c     write(*,*) "isite    dtuv000"
       allocate (xdt0(npole))
       allocate (xdt1(npole))
       allocate (xdt2(npole))
@@ -1684,13 +1711,12 @@ c
 c MES added dqgrdci and dfphidci to OMP shared var.
 !$OMP PARALLEL default(private) shared(npole,ipole,igrid,bsorder,
 !$OMP& nfft3,thetai3,nfft2,thetai2,nfft1,thetai1,qgrid,fphi,
-!$OMP& dqgrdci,dqgrdci2,dfphidci,dfphidci2,dfphitemp,dfphidciX)
+!$OMP& dqgrdci,dfphidciX)
 !$OMP DO
 c
 c     extract the permanent multipole field at each site
 c
       do isite = 1, npole
-         dfphidqg(1,isite) = 0.0d0
          iatm = ipole(isite)
          igrd0 = igrid(1,iatm)
          jgrd0 = igrid(2,iatm)
@@ -1718,48 +1744,6 @@ c        write(*,*) "isite ",isite,"   iatm ",iatm,"   igrd0 ",igrd0
          tuv102 = 0.0d0
          tuv012 = 0.0d0
          tuv111 = 0.0d0
-
-         dtuv000 = 0.0d0
-         dtuv001 = 0.0d0
-         dtuv010 = 0.0d0
-         dtuv100 = 0.0d0
-         dtuv200 = 0.0d0
-         dtuv020 = 0.0d0
-         dtuv002 = 0.0d0
-         dtuv110 = 0.0d0
-         dtuv101 = 0.0d0
-         dtuv011 = 0.0d0
-         dtuv300 = 0.0d0
-         dtuv030 = 0.0d0
-         dtuv003 = 0.0d0
-         dtuv210 = 0.0d0
-         dtuv201 = 0.0d0
-         dtuv120 = 0.0d0
-         dtuv021 = 0.0d0
-         dtuv102 = 0.0d0
-         dtuv012 = 0.0d0
-         dtuv111 = 0.0d0
-
-         dtuv000_2 = 0.0d0
-         dtuv001_2 = 0.0d0
-         dtuv010_2 = 0.0d0
-         dtuv100_2 = 0.0d0
-         dtuv200_2 = 0.0d0
-         dtuv020_2 = 0.0d0
-         dtuv002_2 = 0.0d0
-         dtuv110_2 = 0.0d0
-         dtuv101_2 = 0.0d0
-         dtuv011_2 = 0.0d0
-         dtuv300_2 = 0.0d0
-         dtuv030_2 = 0.0d0
-         dtuv003_2 = 0.0d0
-         dtuv210_2 = 0.0d0
-         dtuv201_2 = 0.0d0
-         dtuv120_2 = 0.0d0
-         dtuv021_2 = 0.0d0
-         dtuv102_2 = 0.0d0
-         dtuv012_2 = 0.0d0
-         dtuv111_2 = 0.0d0
 
 c xdtuv000 is the change in tuv000 at isite (implied) 
 c    due to change in charge at jsite
@@ -1806,28 +1790,6 @@ c    due to change in charge at jsite
             tu12 = 0.0d0
             tu03 = 0.0d0
 
-            dtu00 = 0.0d0
-            dtu10 = 0.0d0
-            dtu01 = 0.0d0
-            dtu20 = 0.0d0
-            dtu11 = 0.0d0
-            dtu02 = 0.0d0
-            dtu30 = 0.0d0
-            dtu21 = 0.0d0
-            dtu12 = 0.0d0
-            dtu03 = 0.0d0
-
-            dtu00_2 = 0.0d0
-            dtu10_2 = 0.0d0
-            dtu01_2 = 0.0d0
-            dtu20_2 = 0.0d0
-            dtu11_2 = 0.0d0
-            dtu02_2 = 0.0d0
-            dtu30_2 = 0.0d0
-            dtu21_2 = 0.0d0
-            dtu12_2 = 0.0d0
-            dtu03_2 = 0.0d0
-
             do jsite = 1, npole
               xdtu00(jsite) = 0.0d0
               xdtu10(jsite) = 0.0d0
@@ -1855,16 +1817,6 @@ c    due to change in charge at jsite
                t2 = 0.0d0
                t3 = 0.0d0
 
-               dt0 = 0.0d0
-               dt1 = 0.0d0
-               dt2 = 0.0d0
-               dt3 = 0.0d0
-
-               dt0_2 = 0.0d0
-               dt1_2 = 0.0d0
-               dt2_2 = 0.0d0
-               dt3_2 = 0.0d0
-
                do jsite = 1, npole
                  xdt0(jsite) = 0.0d0
                  xdt1(jsite) = 0.0d0
@@ -1877,37 +1829,19 @@ c    due to change in charge at jsite
                   i0 = i0 + 1
                   i = i0 + 1 + (nfft1-isign(nfft1,i0))/2
 
-                  if ( i.eq.11 .and. j.eq.8 .and. k.eq.7 ) then
-                    write(*,*) i,j,k,isite
-                    write(*,*) qgrid(1,i,j,k),dqgrdci2(1,i,j,k)
-                    do jsite = 1 , npole
-                      write(*,*) dqgrdci(1,i,j,k,jsite)
-                    end do
-                  endif
+c                 if ( i.eq.11 .and. j.eq.8 .and. k.eq.7 ) then
+c                   write(*,*) i,j,k,isite
+c                   write(*,*) qgrid(1,i,j,k),dqgrdci2(1,i,j,k)
+c                   do jsite = 1 , npole
+c                     write(*,*) dqgrdci(1,i,j,k,jsite)
+c                   end do
+c                 endif
 
                   tq = qgrid(1,i,j,k)
                   t0 = t0 + tq*thetai1(1,it1,iatm)
                   t1 = t1 + tq*thetai1(2,it1,iatm)
                   t2 = t2 + tq*thetai1(3,it1,iatm)
                   t3 = t3 + tq*thetai1(4,it1,iatm)
-
-                  dt0 = dt0
-     &                + thetai1(1,it1,iatm)*dqgrdci(1,i,j,k,isite)
-                  dt1 = dt1
-     &                + thetai1(2,it1,iatm)*dqgrdci(1,i,j,k,isite)
-                  dt2 = dt2
-     &                + thetai1(3,it1,iatm)*dqgrdci(1,i,j,k,isite)
-                  dt3 = dt3
-     &                + thetai1(4,it1,iatm)*dqgrdci(1,i,j,k,isite)
-
-                  dt0_2 = dt0_2 
-     &                + thetai1(1,it1,iatm)*dqgrdci2(1,i,j,k)
-                  dt1_2 = dt1_2
-     &                + thetai1(2,it1,iatm)*dqgrdci2(1,i,j,k)
-                  dt2_2 = dt2_2
-     &                + thetai1(3,it1,iatm)*dqgrdci2(1,i,j,k)
-                  dt3_2 = dt3_2
-     &                + thetai1(4,it1,iatm)*dqgrdci2(1,i,j,k)
 
                   do jsite = 1, npole
                     xdt0(jsite) = xdt0(jsite)
@@ -1933,28 +1867,6 @@ c              end of it1
                tu21 = tu21 + t2*u1
                tu12 = tu12 + t1*u2
                tu03 = tu03 + t0*u3
-
-               dtu00 = dtu00 + dt0*u0
-               dtu10 = dtu10 + dt1*u0
-               dtu01 = dtu01 + dt0*u1
-               dtu20 = dtu20 + dt2*u0
-               dtu11 = dtu11 + dt1*u1
-               dtu02 = dtu02 + dt0*u2
-               dtu30 = dtu30 + dt3*u0
-               dtu21 = dtu21 + dt2*u1
-               dtu12 = dtu12 + dt1*u2
-               dtu03 = dtu03 + dt0*u3
-
-               dtu00_2 = dtu00_2 + dt0_2*u0
-               dtu10_2 = dtu10_2 + dt1_2*u0
-               dtu01_2 = dtu01_2 + dt0_2*u1
-               dtu20_2 = dtu20_2 + dt2_2*u0
-               dtu11_2 = dtu11_2 + dt1_2*u1
-               dtu02_2 = dtu02_2 + dt0_2*u2
-               dtu30_2 = dtu30_2 + dt3_2*u0
-               dtu21_2 = dtu21_2 + dt2_2*u1
-               dtu12_2 = dtu12_2 + dt1_2*u2
-               dtu03_2 = dtu03_2 + dt0_2*u3
 
                do jsite = 1, npole
                  xdtu00(jsite) = xdtu00(jsite) + xdt0(jsite)*u0
@@ -1992,48 +1904,6 @@ c           end of it2
             tuv102 = tuv102 + tu10*v2
             tuv012 = tuv012 + tu01*v2
             tuv111 = tuv111 + tu11*v1
-
-            dtuv000 = dtuv000 + dtu00*v0
-            dtuv100 = dtuv100 + dtu10*v0
-            dtuv010 = dtuv010 + dtu01*v0
-            dtuv001 = dtuv001 + dtu00*v1
-            dtuv200 = dtuv200 + dtu20*v0
-            dtuv020 = dtuv020 + dtu02*v0
-            dtuv002 = dtuv002 + dtu00*v2
-            dtuv110 = dtuv110 + dtu11*v0
-            dtuv101 = dtuv101 + dtu10*v1
-            dtuv011 = dtuv011 + dtu01*v1
-            dtuv300 = dtuv300 + dtu30*v0
-            dtuv030 = dtuv030 + dtu03*v0
-            dtuv003 = dtuv003 + dtu00*v3
-            dtuv210 = dtuv210 + dtu21*v0
-            dtuv201 = dtuv201 + dtu20*v1
-            dtuv120 = dtuv120 + dtu12*v0
-            dtuv021 = dtuv021 + dtu02*v1
-            dtuv102 = dtuv102 + dtu10*v2
-            dtuv012 = dtuv012 + dtu01*v2
-            dtuv111 = dtuv111 + dtu11*v1
-
-            dtuv000_2 = dtuv000_2 + dtu00_2*v0
-            dtuv100_2 = dtuv100_2 + dtu10_2*v0
-            dtuv010_2 = dtuv010_2 + dtu01_2*v0
-            dtuv001_2 = dtuv001_2 + dtu00_2*v1
-            dtuv200_2 = dtuv200_2 + dtu20_2*v0
-            dtuv020_2 = dtuv020_2 + dtu02_2*v0
-            dtuv002_2 = dtuv002_2 + dtu00_2*v2
-            dtuv110_2 = dtuv110_2 + dtu11_2*v0
-            dtuv101_2 = dtuv101_2 + dtu10_2*v1
-            dtuv011_2 = dtuv011_2 + dtu01_2*v1
-            dtuv300_2 = dtuv300_2 + dtu30_2*v0
-            dtuv030_2 = dtuv030_2 + dtu03_2*v0
-            dtuv003_2 = dtuv003_2 + dtu00_2*v3
-            dtuv210_2 = dtuv210_2 + dtu21_2*v0
-            dtuv201_2 = dtuv201_2 + dtu20_2*v1
-            dtuv120_2 = dtuv120_2 + dtu12_2*v0
-            dtuv021_2 = dtuv021_2 + dtu02_2*v1
-            dtuv102_2 = dtuv102_2 + dtu10_2*v2
-            dtuv012_2 = dtuv012_2 + dtu01_2*v2
-            dtuv111_2 = dtuv111_2 + dtu11_2*v1
 
             do jsite = 1, npole
               xdtuv000(jsite) = xdtuv000(jsite) + xdtu00(jsite)*v0
@@ -2083,48 +1953,6 @@ c        mpole of atom/isite calc from grid
          fphi(19,isite) = tuv012
          fphi(20,isite) = tuv111
 
-         dfphidci(1,isite) = dtuv000
-         dfphidci(2,isite) = dtuv100
-         dfphidci(3,isite) = dtuv010
-         dfphidci(4,isite) = dtuv001
-         dfphidci(5,isite) = dtuv200
-         dfphidci(6,isite) = dtuv020
-         dfphidci(7,isite) = dtuv002
-         dfphidci(8,isite) = dtuv110
-         dfphidci(9,isite) = dtuv101
-         dfphidci(10,isite) = dtuv011
-         dfphidci(11,isite) = dtuv300
-         dfphidci(12,isite) = dtuv030
-         dfphidci(13,isite) = dtuv003
-         dfphidci(14,isite) = dtuv210
-         dfphidci(15,isite) = dtuv201
-         dfphidci(16,isite) = dtuv120
-         dfphidci(17,isite) = dtuv021
-         dfphidci(18,isite) = dtuv102
-         dfphidci(19,isite) = dtuv012
-         dfphidci(20,isite) = dtuv111
-
-         dfphidci2(1,isite) = dtuv000_2
-         dfphidci2(2,isite) = dtuv100_2
-         dfphidci2(3,isite) = dtuv010_2
-         dfphidci2(4,isite) = dtuv001_2
-         dfphidci2(5,isite) = dtuv200_2
-         dfphidci2(6,isite) = dtuv020_2
-         dfphidci2(7,isite) = dtuv002_2
-         dfphidci2(8,isite) = dtuv110_2
-         dfphidci2(9,isite) = dtuv101_2
-         dfphidci2(10,isite) = dtuv011_2
-         dfphidci2(11,isite) = dtuv300_2
-         dfphidci2(12,isite) = dtuv030_2
-         dfphidci2(13,isite) = dtuv003_2
-         dfphidci2(14,isite) = dtuv210_2
-         dfphidci2(15,isite) = dtuv201_2
-         dfphidci2(16,isite) = dtuv120_2
-         dfphidci2(17,isite) = dtuv021_2
-         dfphidci2(18,isite) = dtuv102_2
-         dfphidci2(19,isite) = dtuv012_2
-         dfphidci2(20,isite) = dtuv111_2
-
          do jsite = 1, npole
            dfphidciX(1,isite,jsite) = xdtuv000(jsite)
            dfphidciX(2,isite,jsite) = xdtuv100(jsite)
@@ -2149,9 +1977,6 @@ c        mpole of atom/isite calc from grid
          end do
 
 
-c        write(*,*) tuv000,tu00,t0
-c        write(*,*) dtuv000,dtu00,dt0
-c        write(*,*) dtuv000_2,dtu00_2,dt0_2
       end do
 c     end of isite
 c
@@ -2160,7 +1985,6 @@ c
 !$OMP END DO
 !$OMP END PARALLEL
 
-      deallocate (dfphidqg)
       deallocate (xdt0)
       deallocate (xdt1)
       deallocate (xdt2)
@@ -2196,7 +2020,7 @@ c
       deallocate (xdtuv012)
       deallocate (xdtuv111)
 
-      write(*,*) "End of fphi_mpoleCT"
+c     write(*,*) "End of fphi_mpoleCT"
       return
       end
 c     end of fphi_mpoleCT

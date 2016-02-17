@@ -556,6 +556,9 @@ c DCT
       if (allocated(dqgrdci2))  deallocate (dqgrdci2)
       if (allocated(dedci)) deallocate (dedci)
       if (allocated(dedci2)) deallocate (dedci2)
+      if (allocated(depdciX)) deallocate (depdciX)
+      if (allocated(dedciX)) deallocate (dedciX)
+      if (allocated(dedciXX)) deallocate (dedciXX)
 c     if (allocated(qfac))  deallocate (qfac)
 c
 c     deallocation of global arrays from module polar
@@ -564,6 +567,10 @@ c
       if (allocated(thole))  deallocate (thole)
       if (allocated(pdamp))  deallocate (pdamp)
       if (allocated(uind))  deallocate (uind)
+      if (allocated(duinddci))  deallocate (duinddci)
+      if (allocated(duinpdci))  deallocate (duinpdci)
+      if (allocated(dfuinddci))  deallocate (dfuinddci)
+      if (allocated(dfuinpdci))  deallocate (dfuinpdci)
       if (allocated(uinp))  deallocate (uinp)
       if (allocated(uinds))  deallocate (uinds)
       if (allocated(uinps))  deallocate (uinps)

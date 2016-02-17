@@ -76,7 +76,7 @@ c
       integer i,j,k
       real*8, allocatable :: work(:,:)
 c
-      write(*,*) "Entered fftfront : ",ffttyp
+c     write(*,*) "Entered fftfront : ",ffttyp
 c
 c     perform a single 3-D forward transform using FFTW
 c
@@ -138,7 +138,7 @@ c           end do
 c        end do
 c     end do
 
-      write(*,*) "End of fftfront"
+c     write(*,*) "End of fftfront"
       return
       end
 c
@@ -161,7 +161,7 @@ c
       integer i,j,k
       real*8, allocatable :: work(:,:)
 c
-      write(*,*) "Entered fftback"
+c     write(*,*) "Entered fftback"
 c
 c     perform a single 3-D backward transform using FFTW
 c
@@ -224,6 +224,6 @@ c           end do
 c        end do
 c     end do
 
-      write(*,*) "End of fftback"
+c     write(*,*) "End of fftback"
       return
       end

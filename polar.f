@@ -30,6 +30,10 @@ c
       real*8, allocatable :: pdamp(:)
       real*8, allocatable :: uind(:,:)
       real*8, allocatable :: uinp(:,:)
+      real*8, allocatable :: duinddci(:,:,:)
+      real*8, allocatable :: duinpdci(:,:,:)
+      real*8, allocatable :: dfuinddci(:,:,:)
+      real*8, allocatable :: dfuinpdci(:,:,:)
       real*8, allocatable :: uinds(:,:)
       real*8, allocatable :: uinps(:,:)
       save

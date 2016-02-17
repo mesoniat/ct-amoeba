@@ -218,6 +218,9 @@ c added DCT arrays: rpole0, dedci
       if (allocated(rpole0))  deallocate (rpole0)
       if (allocated(dedci))  deallocate (dedci)
       if (allocated(dedci2))  deallocate (dedci2)
+      if (allocated(depdciX))  deallocate (depdciX)
+      if (allocated(dedciX))  deallocate (dedciX)
+      if (allocated(dedciXX))  deallocate (dedciXX)
       if (allocated(depdci))  deallocate (depdci)
 c     if (allocated(deintradci))  deallocate (deintradci)
       if (allocated(polaxe))  deallocate (polaxe)
@@ -236,6 +239,9 @@ c     if (allocated(deintradci))  deallocate (deintradci)
       allocate (rpole0(n))
       allocate (dedci(n))
       allocate (dedci2(n))
+      allocate (depdciX(n))
+      allocate (dedciX(n))
+      allocate (dedciXX(n,n))
       allocate (depdci(n))
 c     allocate (deintradci(n))
       allocate (polaxe(n))
@@ -545,10 +551,18 @@ c
       if (.not. use_polar) then
          if (allocated(uind))  deallocate (uind)
          if (allocated(uinp))  deallocate (uinp)
+         if (allocated(duinddci))  deallocate (duinddci)
+         if (allocated(duinpdci))  deallocate (duinpdci)
+         if (allocated(dfuinddci))  deallocate (dfuinddci)
+         if (allocated(dfuinpdci))  deallocate (dfuinpdci)
          if (allocated(uinds))  deallocate (uinds)
          if (allocated(uinps))  deallocate (uinps)
          allocate (uind(3,n))
          allocate (uinp(3,n))
+         allocate (duinddci(3,n,n))
+         allocate (duinpdci(3,n,n))
+         allocate (dfuinddci(3,n,n))
+         allocate (dfuinpdci(3,n,n))
          allocate (uinds(3,n))
          allocate (uinps(3,n))
 c
@@ -558,6 +572,12 @@ c
             do j = 1, 3
                uind(j,i) = 0.0d0
                uinp(j,i) = 0.0d0
+               do k = 1,npole
+                 duinddci(j,i,k) = 0.0d0
+                 duinpdci(j,i,k) = 0.0d0
+                 dfuinddci(j,i,k) = 0.0d0
+                 dfuinpdci(j,i,k) = 0.0d0
+               end do
                uinds(j,i) = 0.0d0
                uinps(j,i) = 0.0d0
             end do

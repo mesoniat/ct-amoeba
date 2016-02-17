@@ -1737,6 +1737,7 @@ c
 c     perform dynamic allocation of some global arrays
 c
       if (.not. allocated(uind))  allocate (uind(3,npole))
+c     if (.not. allocated(duinddci))  allocate (duinddci(3,npole,npole))
 c
 c     perform dynamic allocation of some local arrays
 c
