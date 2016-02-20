@@ -34,6 +34,8 @@ c
       integer i,j
       real*8 energy,cutoff
       real*8 derivs(3,*)
+c for finite diff tests
+      real*8 dmu,posE,negE
 
       write(*,*) "Start of gradient subrout."
       use_grad = .true.
@@ -248,7 +250,9 @@ c no empole yet --> dem = 0
       if (use_charge)  call echarge1
       if (use_chgdpl)  call echgdpl1
       if (use_dipole)  call edipole1
-      if (use_mpole .or. use_polar)  call empole1
+      if (use_mpole .or. use_polar) then
+         call empole1
+      endif
       if (use_rxnfld)  call erxnfld1
 c
 c     call any miscellaneous energy and gradient routines
@@ -285,6 +289,7 @@ c
 c           write(*,*) "derivs(dir,atom) = ",j," ",i," ",derivs(j,i)
          end do
       end do
+      write(*,*) "Total force on 4 in x-dir = ",derivs(1,4)
 c
 c     check for an illegal value for the total energy
 c
@@ -487,7 +492,7 @@ c hydrogen charges
       enddo
  
 c for testing dedci
-      dq = 0.01d0
+      dq = 0.00d0
       write(*,*) "dq = ",dq
       rpole(1,4) = rpole(1,4) - dq
 
@@ -570,10 +575,15 @@ c dedci already calculated, does not change within this routine
 c     if(n.le.6) then
         write(*,*) "Pre-CT: dem_x, dem_y, dem_z"
         do i=1,n
-c         write(*,*) dedci(i)
+          write(*,*) dedci(i)
 c         dedci(i) = 0.0d0
           write(*,*) dem(1,i),dem(2,i),dem(3,i) 
         enddo
+
+c       write(*,*) "Pre-CT: dep_x, dep_y, dep_z"
+c       do i=1,n
+c         write(*,*) dep(1,i),dep(2,i),dep(3,i)
+c       enddo
 
 c       write(*,*) "CT variables :"
 c       write(*,*) "xna            dxna            zr            rr "
@@ -622,6 +632,7 @@ c check if water with oxygen atom j donates hydrogen bond to i
                         zr = z(j+l) - z(i)
                         call image (xr,yr,zr)
                         rr  = dsqrt(xr**2+yr**2+zr**2)
+                        write(*,*) i,j+l,"r = ",rr
 
                         if(rr.ge.rct1.and.rr.le.rct2) then
                            xna = 
@@ -630,7 +641,7 @@ c check if water with oxygen atom j donates hydrogen bond to i
      & -0.5d0*dsin(pi*(rr-rct1)/(rct2-rct1))
      & *pi/(rct2-rct1)
 
-c                          write(*,*) xna,dxna,rr
+                           write(*,*) xna,dxna,rr
 
 c dE/dq * dq/dr
 c MES : This only affects the 2 atoms in the HB
@@ -653,14 +664,12 @@ c MES : This only affects the 2 atoms in the HB
      & -(dedci(i)*zdqt(1,3)+dedci(i+1)*zdqt(2,3)
      & +dedci(i+2)*zdqt(3,3))*dxna*zr/rr
 
-c                          if (i.eq.4) then
-c                          write(*,*) "dEct/dr in x = ",
-c    & ((muct+etact*xna*dqt)*dqt)*dxna*xr/rr
+                           write(*,*) "dEct/dr in x = ",
+     & ((muct+etact*xna*dqt)*dqt)*dxna*xr/rr
 c                          write(*,*) "dEct/dr in y = ",
 c    & ((muct+etact*xna*dqt)*dqt)*dxna*yr/rr
 c                          write(*,*) "dEct/dr in z = ",
 c    & ((muct+etact*xna*dqt)*dqt)*dxna*zr/rr
-c                          end if
 
 
                            vir(1,1) = vir(1,1)
@@ -699,6 +708,7 @@ c molecule with oxygen atom i donates to hydrogen bond
                         zr = z(i+l) - z(j)
                         call image (xr,yr,zr)
                         rr  = dsqrt(xr**2+yr**2+zr**2)
+                        write(*,*) i+l,j,"r = ",rr
 
                         if(rr.le.rct1) then
 c add to charge transfer energy, no force (energy is constant)
@@ -714,7 +724,7 @@ c add to charge transfer energy, no force (energy is constant)
      & *pi/(rct2-rct1)
 c dxna = N' in Eqn A9 of Lee 2011 JCP
 
-c                          write(*,*) xna,dxna,rr
+                           write(*,*) xna,dxna,rr
 
 c ect here only (not above) to avoid double counting
                            ect=ect+muct*(xna*dqt)
@@ -882,6 +892,7 @@ c
       use kmulti
       implicit none
       integer i,j,k
+      integer atom,dir
       real*8 energy
       real*8 delta
       real*8 fxk,fyk,fzk,e0
@@ -891,31 +902,27 @@ c
       real*8 exneg,eyneg,ezneg
       real*8 expos,eypos,ezpos
       real*8 qneg,qpos,dqdr_fd
-      real*8 dedx_fd,dedy_fd,dedz_fd
+      real*8 dedx_fd,dedy_fd,dedz_fd,dedx_an
       real*8 derivs(3,*)
 
 c MES : crashes if more than one option is used at a time.
 
-      k = 4
-      write(*,*) "Entering gtest for atom ",k
+      atom = 4
+      dir = 1
+      write(*,*) "Entering gtest for atom ",atom," in direction ",dir
+      write(*,*) "Testing dep"
 
 c     get initial forces
 c     derivs(j,i) = derivatives, j=direction, i=atom
-      fxk = derivs(1,k)
-      fyk = derivs(2,k)
-      fzk = derivs(3,k)
-c MES : need to recalculate from within this test,
-c	not use from previous md step
-c 	store forces for i=1 and i=n
-c     e0 = energy ()
-      
+c     dedx_an = derivs(dir,atom)
+      dedx_an = dem(dir,atom)
 
 c     save initial position
-      x0 = x(k)
-      y0 = y(k)
-      z0 = z(k)
-      q0 = pole(1,k)
-      write(*,*) "(x,y,z) and q of ",k," : ",x0,y0,z0,q0
+      x0 = x(atom)
+      y0 = y(atom)
+      z0 = z(atom)
+      q0 = rpole(1,atom)
+      write(*,*) "(x,y,z) and q of ",atom," : ",x0,y0,z0,q0
 
 c     change for position
       delta = 0.0001d0
@@ -923,102 +930,29 @@ c     change for position
 c     use_crgtr = .false.
 
 c     for first atom, forces in x, y, and z
-c     restore original position after calculation
       xneg = x0 - delta
-      x(k) = xneg
-      exneg = energy ()
-      qneg = pole(1,k)
+      x(atom) = xneg
+      call empole1
+      exneg = ep
+      qneg = rpole(1,atom)
 
       xpos = x0 + delta
-      x(k) = xpos
-      expos = energy ()
-      qpos = pole(1,k)
+      x(atom) = xpos
+      call empole1
+      expos = ep
+      qpos = rpole(1,atom)
 
       dedx_fd = ( expos - exneg ) / ( 2.0 * delta )
-      write(*,*) "Force in x on ",k," via FD   = ",dedx_fd
-      write(*,*) "Force in x on ",k," analytic = ",fxk
+      write(*,*) "Force via FD   = ",dedx_fd
+      write(*,*) "Force analytic = ",dedx_an
 
       dqdr_fd = ( qpos - qneg ) / ( 2.0 * delta )
       write(*,*) "dqdr FD = ",dqdr_fd 
 
-      x(k) = x0
-      pole(1,k) = q0
-
-c     yneg = y0 - delta
-c     y(1) = yneg
-c     eyneg = energy ()
-
-c     ypos = y0 + delta
-c     y(1) = ypos
-c     eypos = energy ()
-
-c     dedy_fd = ( eypos - eyneg ) / ( 2.0 * delta )
-c     write(*,*) "Force in y on 1 via FD  = ",dedy_fd
-c     write(*,*) "Force in y on 1 analtic = ",fy1
-c     y(1) = y0
-
-c     write(*,*) "(x,y,z) of 1 : ",x(1)," ",y(1)," ",z(1)
-
-c     zneg = z0 - delta
-c     z(1) = zneg
-c     ezneg = energy ()
-
-c     zpos = z0 + delta
-c     z(1) = zpos
-c     ezpos = energy ()
-
-c     dedz_fd = ( ezpos - ezneg ) / ( 2.0 * delta )
-c     write(*,*) "Force in z on 1 via FD  = ",dedz_fd
-c     write(*,*) "Force in z on 1 analtic = ",fz1
-c     z(1) = z0
-
-c     write(*,*) "(x,y,z) of 1 : ",x(1)," ",y(1)," ",z(1)
-
-c     for final atom, forces in x, y, and z
-c     x0 = x(n)
-c     y0 = y(n)
-c     z0 = z(n)
-c     write(*,*) "(x,y,z) of n : ",x(n)," ",y(n)," ",z(n)
-
-c     xneg = x0 - delta
-c     x(n) = xneg
-c     exneg = energy ()
-
-c     xpos = x0 + delta
-c     x(n) = xpos
-c     expos = energy ()
-
-c     dedx_fd = ( expos - exneg ) / ( 2.0 * delta )
-c     write(*,*) "Force in x on n via FD  = ",dedx_fd
-c     write(*,*) "Force in x on n analtic = ",fxn
-c     x(n) = x0
-
-c     yneg = y0 - delta
-c     y(n) = yneg
-c     eyneg = energy ()
-
-c     ypos = y0 + delta
-c     y(n) = ypos
-c     eypos = energy ()
-
-c     dedy_fd = ( eypos - eyneg ) / ( 2.0 * delta )
-c     write(*,*) "Force in y on n via FD  = ",dedy_fd
-c     write(*,*) "Force in y on n analtic = ",fyn
-c     y(n) = y0
-
-
-c     zneg = z0 - delta
-c     z(n) = zneg
-c     ezneg = energy ()
-
-c     zpos = z0 + delta
-c     z(n) = zpos
-c     ezpos = energy ()
-
-c     dedz_fd = ( ezpos - ezneg ) / ( 2.0 * delta )
-c     write(*,*) "Force in z on n via FD   = ",dedz_fd
-c     write(*,*) "Force in z on n analytic = ",fzn
-c     z(n) = z0
+c     restore original position after calculation
+      x(atom) = x0
+      rpole(1,atom) = q0
+      call empole1
 
 c     use_crgtr = .true.
 

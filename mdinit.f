@@ -68,6 +68,7 @@ c
 c     set default parameters for the dynamics trajectory
 c
       write(*,*) "start of mdinit"
+      x(4) = x(4) - 0.0000d0
       do i = 1,n
         write(*,*) x(i),y(i),z(i)
       enddo

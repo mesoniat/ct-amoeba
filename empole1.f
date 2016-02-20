@@ -4562,8 +4562,9 @@ c
       use polar
       use polpot
       use virial
+      use units
       implicit none
-      integer i,j,ii
+      integer i,j,ii,iii
       real*8 e,ei,eintra
       real*8 f,term,fterm
       real*8 cii,dii,qii,uii
@@ -4582,6 +4583,8 @@ c
       real*8 trq(3),trqi(3)
       real*8 frcx(3),frcy(3),frcz(3)
       real*8 duindxdci,duindydci,duindzdci
+      real*8 dmu,mu,fd,mup,dmup
+      real*8 epos(5)
 c
       write(*,*) "empole1d"
       x(1) = x(1) + 0.0000d0
@@ -4619,16 +4622,35 @@ c
 c     compute the induced dipole moment at each atom
 c
       call induce
-c
+      mu = uind(1,4)
+c     mup = uinp(1,4)
+c     dmu = 0.000001d0
+c     dmup = 0.000001d0
+c     write(*,*) "Dipoles: ",uind(1,4),uinp(1,4)
+c     write(*,*) "Dipoles: ",mu,mup
+c     write(*,*) "Dipole increment ",dmu,dmup
+
+c     do iii = -2,2
+c     uind(1,4) = mu + dmu*dble(iii)
+c     uinp(1,4) = mup + dmup*dble(iii)
+c     ep = 0.0d0
+c     write(*,*) "Dipoles: ",uind(1,4),uinp(1,4)
+c     write(*,*) "conversion int to float ",dble(iii)
+
+
+c loop over rest of empole1d for FD test
 c     compute the reciprocal space part of the Ewald summation
 c
+c     write(*,*) "ep before any calc.s ",ep
       call emrecip1
-      write(*,*) "dedci(4)",dedci(4)
-      write(*,*) "em",em
+c     write(*,*) "ep after emrecip1 ",ep
+c     write(*,*) "Dipoles: ",uind(1,4),uinp(1,4)
 c
 c     compute the real space part of the Ewald summation
 c
       call ereal1d (eintra)
+c     write(*,*) "ep after ereal1d ",ep
+c     write(*,*) "Dipoles: ",uind(1,4),uinp(1,4)
 c
 c     compute the Ewald self-energy term over all the atoms
 c
@@ -4674,7 +4696,7 @@ c    &              * ( dix * duindxdci + diy * duindydci
 c    &                  + diz * duindzdci )
 c        write(*,*) i,"  depdci(i)    ",depdci(i)
       end do
-      write(*,*) "em = ",em,"    ep = ",ep
+c     write(*,*) "em = ",em,"    ep = ",ep
 c
 c     compute the self-energy torque term due to induced dipole
 c
@@ -4792,6 +4814,22 @@ c
 c     intermolecular energy is total minus intramolecular part
 c
       einter = einter + em + ep - eintra
+
+c     write(*,*) "ep after self ",ep
+c     write(*,*) "Dipoles: ",uind(1,4),uinp(1,4)
+
+c     write(*,*) "dep(x,4) = ",dep(1,4)
+c     epos(iii+3) = ep
+
+c     enddo
+c end of FD test
+
+c     fd = (epos(4) - epos(2))/(2.0d0*dmu)
+c     write(*,*) "finite diff of ep = ",fd
+c     write(*,*) "     = ",fd/debye," in kcal/mol/D"
+c     fd = (epos(1) - 8.0d0*epos(2) + 8.0d0*epos(4) - epos(5))/(12*dmu)
+c     write(*,*) "finite diff of ep = ",fd
+
 
       return
       end
@@ -6948,7 +6986,7 @@ c    &                        + dfuinddci(k,i)*fphi(k+1,i)
          ep = ep + e
          do i = 1, npole
             depdci(i) = 0.5d0*depdciX(i)
-            write(*,*) i,"    depdci(i)    ",depdci(i)
+c           write(*,*) i,"    depdci(i)    ",depdci(i)
             ii = ipole(i)
             dep(1,ii) = dep(1,ii) + frc(1,i)
             dep(2,ii) = dep(2,ii) + frc(2,i)

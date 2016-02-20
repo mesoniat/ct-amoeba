@@ -160,7 +160,8 @@ c
       end if
 
 c MES for debugging
-      uind(1,4) = uind(1,4) - 0.00d0
+c     uind(2,3) = uind(2,3) + 0.00000001d0
+      write(*,*) "uind(1,4) = ",uind(1,4),debye*uind(1,4)
 
       return
       end
@@ -360,6 +361,8 @@ c
 c     conjugate gradient iteration of the mutual induced dipoles
 c
          write(*,*) "Done with setup. Starting loop."
+         poleps = 0.00000001d0
+         write(*,*) "dipole tolerance = ",poleps
          do while (.not. done)
             iter = iter + 1
             do i = 1, npole

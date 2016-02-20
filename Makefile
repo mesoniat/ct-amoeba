@@ -216,6 +216,7 @@ OBJS = action.o \
        document.o \
        domega.o \
        dynamic.o \
+       dynamic_THz.o \
        eangang.o \
        eangang1.o \
        eangang2.o \
@@ -677,6 +678,7 @@ EXEFILES = alchemy.x \
            distgeom.x \
            document.x \
            dynamic.x \
+           dynamic_THz.x \
            gda.x \
            intedit.x \
            intxyz.x \
@@ -760,6 +762,7 @@ rename:
 	mv  distgeom.x   $(BINDIR)/distgeom
 	mv  document.x   $(BINDIR)/document
 	mv  dynamic.x    $(BINDIR)/dynamic
+	mv  dynamic_THz.x    $(BINDIR)/dynamic_THz
 	mv  gda.x        $(BINDIR)/gda
 	mv  intedit.x    $(BINDIR)/intedit
 	mv  intxyz.x     $(BINDIR)/intxyz
@@ -823,6 +826,7 @@ remove_links:
 	rm -f $(LINKDIR)/distgeom
 	rm -f $(LINKDIR)/document
 	rm -f $(LINKDIR)/dynamic
+	rm -f $(LINKDIR)/dynamic_THz
 	rm -f $(LINKDIR)/gda
 	rm -f $(LINKDIR)/intedit
 	rm -f $(LINKDIR)/intxyz
@@ -886,6 +890,7 @@ create_links:
 	ln -s $(BINDIR)/distgeom   $(LINKDIR)/distgeom
 	ln -s $(BINDIR)/document   $(LINKDIR)/document
 	ln -s $(BINDIR)/dynamic    $(LINKDIR)/dynamic
+	ln -s $(BINDIR)/dynamic_THz    $(LINKDIR)/dynamic_THz
 	ln -s $(BINDIR)/gda        $(LINKDIR)/gda
 	ln -s $(BINDIR)/intedit    $(LINKDIR)/intedit
 	ln -s $(BINDIR)/intxyz     $(LINKDIR)/intxyz
@@ -1476,6 +1481,7 @@ dma.o:
 document.o: iounit.o
 domega.o:
 dynamic.o: atoms.o bath.o bndstr.o bound.o inform.o iounit.o keys.o mdstuf.o potent.o sizes.o solute.o stodyn.o usage.o
+dynamic_THz.o: atoms.o bath.o bndstr.o bound.o inform.o iounit.o keys.o mdstuf.o potent.o sizes.o solute.o stodyn.o usage.o atomid.o boxes.o charge.o dipole.o files.o group.o moldyn.o moment.o mpole.o polar.o rgddyn.o units.o
 eangang.o: angang.o angbnd.o angpot.o atoms.o bound.o energi.o group.o math.o sizes.o usage.o
 eangang1.o: angang.o angbnd.o angpot.o atoms.o bound.o deriv.o energi.o group.o math.o sizes.o usage.o virial.o
 eangang2.o: angang.o angbnd.o angpot.o atoms.o bound.o group.o hessn.o math.o sizes.o
