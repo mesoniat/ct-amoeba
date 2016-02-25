@@ -1,0 +1,81 @@
+There are two completely new subroutines: newcrg and ect1.
+Both of these are found in the gradient.f file.
+Subroutine newcrg calculates the instantaneous charge based on 
+an atom's base charge and the water molecule's hydrogen bonding pattern. 
+The newcrg subroutine is called before empole1. 
+(empole1 contains the induced dipole calculation, permanent electrostatic, 
+and polarization energy.) 
+Subroutine ect1 calculates the charge transfer energy $U_{CT}$ 
+and force due to CT including $ \partial E_{CT} / \partial r_{i \alpha} $
+and $( \partial E_{m.p.} / \partial q_{j \beta} )( \partial q_{j \beta} / \partial r_{i \alpha}  ) $.
+These components of the CT force are added to dem (the force due to permanent multipoles).
+The ect1 subroutine is called after empole1. 
+
+The calculation of $( \partial E_{m.p.} / \partial q_{j \beta} )$, 
+called dedci(i) in the code, required the modification 
+of the empole1d subroutine and associated particle mesh ewald (PME) subroutines.
+When empole1d begins, it is given the instantaneous charges. 
+The induced dipoles are calculated based on the instantaneous charges. 
+Then, the electrostatic and polarization energy is calculated in three parts: 
+emrecip1, ereal1d, and the self term calculated within empole1d.
+For the real space and self terms, dedci is derived straightforwardly 
+from the equation for energy e. 
+
+The energy in reciprocal space is calculated as a function of fphi.
+The derivative dfphidciX(k,j,i) is the derivative of fphi with respect to charge
+at multipole level k at site j due to change of charge on i.
+Because we're using PME, 
+the potential fphi is calculated from the charge on the grid, qgrid. 
+Within emrecip1, the convolution of qgrid is performed simultaneously
+with the fast Fourier transform (FFT).
+Therefore, the same fftfront and fftback routines must be performed on dqgrdci(1,i,j,k,isite).
+which is the change in qgrid(1,i,j,k) due to a change in charge of isite.
+Because the fftfront and fftback routines are set up for the qgrid array with four dimensions,
+dqgrdci(1,i,j,k,isite) is copied to qgrid(1,i,j,k) for each isite,
+and the FT is performed on that array, then copied back to dqgrdci(1,i,j,k,isite).
+(The FT is performed on qgrid(1,i,j,k) first, which is copied to tmpqgrid(1,i,j,k) before working on dqgrdci(1,i,j,k,isite).)
+Note: this could be a real bottleneck point for the code but could be amenable to OMP. 
+
+There is a contribution from depdci because of the interaction of the 
+induced dipoles with the permanent field. 
+The depdci term has contributions in emrecip1 and ereal1d.
+
+The calculation of dqgrdci and dfphidciX are done in the pmestuff.f file. 
+In grid\_mpole, dqgrdci are calculated.
+A new subroutine, fphi\_mpoleCT, was implemented in pmestuff.f
+to calculate dfphidciX from dqgrdci. 
+
+
+Other modifications include: \\
+1. field.f : initialize use\_crgtr to false   \\
+2. prmkey.f : change use\_crgtr to true if dct keyword found in parameter file \\
+3. readprm.f : read in CT parameters if dct keyword found in parameter file \\
+4. potent.f : declare logical use\_crgtr variable \\
+5. mpole.f : declaration of dedci and rpole0 \\
+6. kmpole.f : allocation of dedci \\
+7. kmulti.f : declaration of CT parameters \\
+8. gradient.f : calls to newcrg and ect1 subroutines \\
+9. 
+
+
+
+Generally, for (de)allocation of derivatives with respect to change in charge 
+is done at the same time as the variable it is taking the derivative of.
+For example, the variable fphi has a derivative fphidciX, 
+both of which are declared and allocated in emrecip1. 
+
+
+New CT code within old routines is marked with the logical variable use\_crgtr
+or with DCT in the comments. 
+
+
+Some routines have additional use statements for access to CT variables. 
+
+
+Caveats: \\
+1. only in empole1d, so only for PME, using mpole-list \\
+	many analysis tools may not work \\
+2. only tested with beeman integrator \\
+3. water only (no ions, no other molecules) \\
+4. \\
+
