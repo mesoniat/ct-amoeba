@@ -174,7 +174,7 @@ c     This is ok because dedci and ect are only used with CT routines
 c         Their values are added to dem and em for later use
 c MES debug
       dr = 0.000d0
-      x(4) = x(4) - dr
+      x(4) = x(4) + dr
 c
 c     maintain any periodic boundary conditions
 c
@@ -283,6 +283,7 @@ c     if (isnan(esum)) then
 
 c     call gtest(derivs)
 c     call qtest(derivs)
+      call ptest
 
       return
       end
@@ -443,6 +444,7 @@ c for testing dedci
       write(*,*) "dq = ",dq
       rpole(1,4) = rpole(1,4) + dq
       write(*,*) "q(4) = ",rpole(1,4)
+      write(*,*) "q(3) = ",rpole(1,3)
 
 c copy new charge to other reference frame
       do i=1,n
@@ -573,8 +575,7 @@ c check if water with oxygen atom j donates hydrogen bond to i
 
                            write(*,*) xna,dxna,rr
 
-c dEmp/dq * dq/dr
-c This only affects the 2 atoms in the HB
+c dE/dq * dq/dr
                            dem(1,i) = dem(1,i)
      & +(dedci(i)*zdqt(1,3)+dedci(i+1)*zdqt(2,3)
      & +dedci(i+2)*zdqt(3,3))*dxna*xr/rr
@@ -593,14 +594,6 @@ c This only affects the 2 atoms in the HB
                            dem(3,j+l) = dem(3,j+l) 
      & -(dedci(i)*zdqt(1,3)+dedci(i+1)*zdqt(2,3)
      & +dedci(i+2)*zdqt(3,3))*dxna*zr/rr
-
-                           write(*,*) "dEct/dr in x = ",
-     & ((muct+etact*xna*dqt)*dqt)*dxna*xr/rr
-c                          write(*,*) "dEct/dr in y = ",
-c    & ((muct+etact*xna*dqt)*dqt)*dxna*yr/rr
-c                          write(*,*) "dEct/dr in z = ",
-c    & ((muct+etact*xna*dqt)*dqt)*dxna*zr/rr
-
 
                            vir(1,1) = vir(1,1)
      & -xr*(dedci(i)*zdqt(1,3)+dedci(i+1)*zdqt(2,3)
@@ -660,8 +653,9 @@ c ect here only (not above) to avoid double counting
                            ect=ect+muct*(xna*dqt)
      & +0.5d0*etact*(xna*dqt)**2
 
-c dE/dq + dE_ct/dr
+c dE/dq * dq/dr + dE_ct/dr
 c MES debug -- I think this is the section I changed at one point
+c    It is but changing l+1 to l in zdqt doesn't change dqdr
              dem(1,i+l) = dem(1,i+l)
      &+(dedci(i)*zdqt(1,l+1)+dedci(i+1)*zdqt(2,l+1)
      & +dedci(i+2)*zdqt(3,l+1)
@@ -693,10 +687,10 @@ c MES debug -- I think this is the section I changed at one point
      & +(muct+etact*xna*dqt)*dqt
      &)*dxna*zr/rr
 
-                           write(*,*) "dqdr in x analytic = ",
-     & (zdqt(1,3)+zdqt(2,3)+zdqt(3,3))*dxna*xr/rr
-                           write(*,*) "    OR ???           ",
-     & (zdqt(1,l+1)+zdqt(2,l+1)+zdqt(3,l+1))*dxna*xr/rr
+                           write(*,*) "dqdr in x analytic = "
+                           write(*,*) zdqt(1,l+1)*dxna*xr/rr,
+     & zdqt(2,l+1)*dxna*xr/rr,
+     & zdqt(3,l+1)*dxna*xr/rr,l+1
 c                          write(*,*) "dqdr in y analytic = ",
 c    & (zdqt(1,3)+zdqt(2,3)+zdqt(3,3))*dxna*yr/rr
 c                          write(*,*) "dqdr in z analytic = ",
@@ -828,8 +822,6 @@ c
       real*8 dedx_fd,dedy_fd,dedz_fd,dedx_an
       real*8 derivs(3,*)
 
-c MES : crashes if more than one option is used at a time.
-
       atom = 4
       dir = 1
       write(*,*) "Entering gtest for atom ",atom," in direction ",dir
@@ -838,7 +830,7 @@ c MES : crashes if more than one option is used at a time.
 c     get initial forces
 c     derivs(j,i) = derivatives, j=direction, i=atom
 c     dedx_an = derivs(dir,atom)
-c     dedx_an = dem(dir,atom)
+      dedx_an = dep(dir,atom)
 
 c     save initial position
       x0 = x(atom)
@@ -853,17 +845,13 @@ c     change for position
 c     for first atom, forces in x, y, and z
       xneg = x0 - delta
       x(atom) = xneg
-      call newcrg
       call empole1
-      call ect1
       exneg = ep
       qneg = rpole(1,atom)
 
       xpos = x0 + delta
       x(atom) = xpos
-      call newcrg
       call empole1
-      call ect1
       expos = ep
       qpos = rpole(1,atom)
 
@@ -877,9 +865,7 @@ c     write(*,*) "Force analytic = ",dedx_an
 c     restore original position after calculation
       x(atom) = x0
       rpole(1,atom) = q0
-      call newcrg
       call empole1
-      call ect1
 
       write(*,*) "Finished with gtest"
 
@@ -1002,6 +988,7 @@ c
 c    DCT subroutine ectE 
 c       set up for water-water interations only
 c    Ect only, no derivatives
+c       for use with energy subroutine and ptest
 c
 c
       subroutine ectE 
