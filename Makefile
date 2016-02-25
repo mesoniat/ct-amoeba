@@ -33,11 +33,7 @@
 ##  BINDIR       Hard Copies of TINKER Executables
 ##  LINKDIR      Linked Copies of TINKER Executables
 
-#TINKERDIR = $(HOME)/tinker
-#BINDIR = $(TINKERDIR)/bin
-#LINKDIR = /usr/local/bin
-
-TINKERDIR = /home/mesoniat/CT-AMOEBA/Tinker/tinker/source
+TINKERDIR = /home/mesoniat/CT-AMOEBA/Tinker/tinker
 BINDIR = $(TINKERDIR)/bin
 LINKDIR = /usr/local/bin
 
@@ -45,20 +41,6 @@ LINKDIR = /usr/local/bin
 ##  Known Machine Types; Uncomment One of the Following Sections  ##
 ##  May Need Editing to Match Your Desired OS & Compiler Version  ##
 ####################################################################
-
-
-##
-## Machine: Armada
-## Flags for ifort
-##
-##
-
-F77 = ifort
-LIBS = -L/share/apps/tinkerfftw/lib -lfftw3_threads -lfftw3
-F77FLAGS = -c -xHost -assume cc_omp
-OPTFLAGS = -O3 -no-ipo -no-prec-div -openmp -mcmodel=large -shared-intel -check bounds -traceback
-LIBFLAGS = -crusv
-LINKFLAGS = $(OPTFLAGS) # -static-intel
 
 ##  Machine:  Generic Linux or Macintosh
 ##  CPU Type: Intel x86 Compatible
@@ -77,13 +59,13 @@ LINKFLAGS = $(OPTFLAGS) # -static-intel
 ##  Compiler: GNU gfortran
 ##  Parallel: OpenMP
 
-#F77 = gfortran
-#LIBS = -L$(TINKERDIR)/fftw/lib -lfftw3_threads -lfftw3
-#F77FLAGS = -c
-#OPTFLAGS = -O3 -ffast-math -fopenmp
-#LIBFLAGS = -crusv
+F77 = gfortran
+LIBS = -L/share/apps/tinkerfftw/lib -lfftw3_threads -lfftw3
+F77FLAGS = -c 
+OPTFLAGS = -O3 -openmp -mcmodel=large
+LIBFLAGS = -crusv
 #RANLIB = ranlib -c
-#LINKFLAGS = $(OPTFLAGS) -static-libgcc
+LINKFLAGS = $(OPTFLAGS) # -static-libgcc
 
 ##  Machine:  Generic Linux
 ##  CPU Type: Intel x86 Compatible (also AMD)
@@ -731,7 +713,7 @@ EXEFILES = alchemy.x \
            xyzsybyl.x
 
 %.o: %.f
-	${F77} ${F77FLAGS} ${OPTFLAGS} $< -o $@
+	${F77} ${F77FLAGS} ${OPTFLAGS} $< -o $@ 
 
 %.o: %.c
 	${CC} ${CFLAGS} ${INCLUDEDIR} ${OPTFLAGS} $<
@@ -895,7 +877,6 @@ create_links:
 	ln -s $(BINDIR)/intedit    $(LINKDIR)/intedit
 	ln -s $(BINDIR)/intxyz     $(LINKDIR)/intxyz
 	ln -s $(BINDIR)/minimize   $(LINKDIR)/minimize
-	ln -s $(BINDIR)/minimize_4site   $(LINKDIR)/minimize_4site
 	ln -s $(BINDIR)/minirot    $(LINKDIR)/minirot
 	ln -s $(BINDIR)/minrigid   $(LINKDIR)/minrigid
 	ln -s $(BINDIR)/molxyz     $(LINKDIR)/molxyz
@@ -1486,7 +1467,7 @@ eangang.o: angang.o angbnd.o angpot.o atoms.o bound.o energi.o group.o math.o si
 eangang1.o: angang.o angbnd.o angpot.o atoms.o bound.o deriv.o energi.o group.o math.o sizes.o usage.o virial.o
 eangang2.o: angang.o angbnd.o angpot.o atoms.o bound.o group.o hessn.o math.o sizes.o
 eangang3.o: action.o analyz.o angang.o angbnd.o angpot.o atomid.o atoms.o bound.o energi.o group.o inform.o iounit.o math.o sizes.o usage.o
-eangle.o: angbnd.o angpot.o atoms.o atomid.o bound.o energi.o group.o math.o sizes.o usage.o
+eangle.o: angbnd.o angpot.o atoms.o bound.o energi.o group.o math.o sizes.o usage.o
 eangle1.o: angbnd.o angpot.o atoms.o bound.o deriv.o energi.o group.o math.o sizes.o usage.o virial.o
 eangle2.o: angbnd.o angpot.o atoms.o bound.o group.o hessn.o math.o sizes.o
 eangle3.o: action.o analyz.o angbnd.o angpot.o atomid.o atoms.o bound.o energi.o group.o inform.o iounit.o math.o sizes.o usage.o
@@ -1495,7 +1476,7 @@ eangtor1.o: angbnd.o angtor.o atoms.o bound.o deriv.o energi.o group.o math.o si
 eangtor2.o: angbnd.o angtor.o atoms.o bound.o group.o hessn.o math.o sizes.o torpot.o tors.o
 eangtor3.o: action.o analyz.o angbnd.o angtor.o atomid.o atoms.o bound.o energi.o group.o inform.o iounit.o math.o sizes.o torpot.o tors.o usage.o
 ebond.o: atoms.o bndpot.o bndstr.o bound.o energi.o group.o sizes.o usage.o
-ebond1.o: atoms.o atomid.o bndpot.o bndstr.o bound.o deriv.o energi.o group.o sizes.o usage.o virial.o
+ebond1.o: atoms.o bndpot.o bndstr.o bound.o deriv.o energi.o group.o sizes.o usage.o virial.o
 ebond2.o: atmlst.o atoms.o bndpot.o bndstr.o bound.o couple.o group.o hessn.o sizes.o
 ebond3.o: action.o analyz.o atomid.o atoms.o bndpot.o bndstr.o bound.o energi.o group.o inform.o iounit.o sizes.o usage.o
 ebuck.o: atomid.o atoms.o bound.o boxes.o cell.o couple.o energi.o group.o iounit.o light.o limits.o math.o neigh.o shunt.o sizes.o usage.o vdw.o vdwpot.o warp.o
@@ -1629,7 +1610,7 @@ getword.o: ascii.o
 getxyz.o: inform.o iounit.o output.o
 ghmcstep.o: atomid.o atoms.o bath.o freeze.o iounit.o mdstuf.o moldyn.o sizes.o stodyn.o units.o usage.o virial.o
 gkstuf.o: sizes.o
-gradient.o: atoms.o bound.o couple.o deriv.o energi.o inter.o iounit.o limits.o potent.o rigid.o sizes.o vdwpot.o virial.o kmulti.o
+gradient.o: atoms.o bound.o couple.o deriv.o energi.o inter.o iounit.o limits.o potent.o rigid.o sizes.o vdwpot.o virial.o
 gradrgd.o: atoms.o group.o rigid.o sizes.o
 gradrot.o: atoms.o deriv.o domega.o omega.o potent.o rotbnd.o sizes.o
 group.o:
@@ -1728,7 +1709,6 @@ maxwell.o: units.o
 mdinit.o: atomid.o atoms.o bath.o bound.o couple.o files.o freeze.o group.o inform.o iounit.o keys.o mdstuf.o molcul.o moldyn.o mpole.o rgddyn.o rigid.o sizes.o stodyn.o units.o uprior.o usage.o
 mdrest.o: atomid.o atoms.o bound.o group.o inform.o iounit.o mdstuf.o moldyn.o rgddyn.o sizes.o units.o
 mdsave.o: atomid.o atoms.o bound.o boxes.o energi.o files.o group.o inform.o iounit.o mdstuf.o moldyn.o mpole.o output.o polar.o potent.o rgddyn.o sizes.o socket.o titles.o units.o
-mdsave_twoSaveFreq.o: atomid.o atoms.o bound.o boxes.o energi.o files.o group.o inform.o iounit.o mdstuf.o moldyn.o mpole.o output.o polar.o potent.o rgddyn.o sizes.o socket.o titles.o units.o
 mdstat.o: atoms.o bath.o bound.o boxes.o inform.o inter.o iounit.o limits.o mdstuf.o molcul.o sizes.o units.o usage.o warp.o
 mdstuf.o:
 mechanic.o: inform.o iounit.o limits.o potent.o vdwpot.o
@@ -1736,7 +1716,6 @@ merck.o: sizes.o
 merge.o: atomid.o atoms.o couple.o iounit.o refer.o sizes.o
 minima.o:
 minimize.o: atoms.o files.o inform.o iounit.o keys.o scales.o sizes.o usage.o
-minimize_4site.o: atoms.o atomid.o files.o inform.o iounit.o keys.o scales.o sizes.o usage.o
 minirot.o: files.o inform.o iounit.o keys.o math.o omega.o scales.o sizes.o zcoord.o
 minrigid.o: files.o group.o inform.o iounit.o keys.o math.o output.o rigid.o sizes.o
 molcul.o:

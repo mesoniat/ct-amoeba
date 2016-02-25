@@ -23,10 +23,6 @@ c
       use potent
       implicit none
       integer i,j,ii
-
-      write(*,*) "Entering empole1 subrout."
-c     write(*,*) "empole1 options: ewald ",use_ewald," mlist ",
-c    &  use_mlist," mpole ",use_mpole," polar ",use_polar
 c
 c
 c     choose the method for summing over multipole interactions
@@ -66,14 +62,6 @@ c
          end do
       end if
 
-      write(*,*) "Energy components: [kcal/mol] "
-      write(*,*) "    Esum      ",esum
-      write(*,*) "    bond, ang ",eb,ea
-      write(*,*) "    ub        ",eub
-      write(*,*) "    vdW       ",ev
-      write(*,*) "    mp, pol   ",em,ep
-
-      write(*,*) "Ending empole1 subrout."
       return
       end
 c
@@ -178,7 +166,6 @@ c
       logical proceed,usei,usek
       character*6 mode
 c
-      write(*,*) "empole1a"
 c
 c     zero out multipole and polarization energy and derivatives
 c
@@ -1730,7 +1717,6 @@ c
       logical proceed,usei,usek
       character*6 mode
 c
-      write(*,*) "empole1b"
 c
 c     zero out multipole and polarization energy and derivatives
 c
@@ -2569,7 +2555,6 @@ c
       real*8 trq(3),trqi(3)
       real*8 frcx(3),frcy(3),frcz(3)
 c
-      write(*,*) "empole1c"
 c
 c     zero out multipole and polarization energy and derivatives
 c
@@ -4563,6 +4548,8 @@ c
       use polpot
       use virial
       use units
+c DCT
+      use potent
       implicit none
       integer i,j,ii,iii
       real*8 e,ei,eintra
@@ -4582,20 +4569,11 @@ c
       real*8 zdfield,zufield
       real*8 trq(3),trqi(3)
       real*8 frcx(3),frcy(3),frcz(3)
-      real*8 duindxdci,duindydci,duindzdci
-      real*8 dmu,mu,fd,mup,dmup
-      real*8 epos(5)
+      real*8 epos(5),dq
 c
-      write(*,*) "empole1d"
-      x(1) = x(1) + 0.0000d0
-      write(*,*) "    Positions: "
-      do i = 1,n
-        write(*,*) x(i),y(i),z(i)
-      enddo
 c
 c     zero out multipole and polarization energy and derivatives
- 
-c     write(*,*) "Are dedci zero? Yes." 
+c
       em = 0.0d0
       ep = 0.0d0
       do i = 1, n
@@ -4609,7 +4587,6 @@ c
 c     set the energy unit conversion factor
 c
       f = electric / dielec
-c     write(*,*) "electric = ",electric," dielectric = ",dielec
 c
 c     check the sign of multipole components at chiral sites
 c
@@ -4622,39 +4599,27 @@ c
 c     compute the induced dipole moment at each atom
 c
       call induce
-      mu = uind(1,4)
-c     mup = uinp(1,4)
-c     dmu = 0.000001d0
-c     dmup = 0.000001d0
-c     write(*,*) "Dipoles: ",uind(1,4),uinp(1,4)
-c     write(*,*) "Dipoles: ",mu,mup
-c     write(*,*) "Dipole increment ",dmu,dmup
 
-c     do iii = -2,2
-c     uind(1,4) = mu + dmu*dble(iii)
-c     uinp(1,4) = mup + dmup*dble(iii)
-c     ep = 0.0d0
-c     write(*,*) "Dipoles: ",uind(1,4),uinp(1,4)
-c     write(*,*) "conversion int to float ",dble(iii)
-
-
-c loop over rest of empole1d for FD test
+c MES debug
+c     dq = 0.00001d0
+c     rpole(1,4) = rpole(1,4) - dq
+c
 c     compute the reciprocal space part of the Ewald summation
 c
-c     write(*,*) "ep before any calc.s ",ep
       call emrecip1
-c     write(*,*) "ep after emrecip1 ",ep
-c     write(*,*) "Dipoles: ",uind(1,4),uinp(1,4)
+      write(*,*) "after emrecip"
+      write(*,*) "em, dedci(4) ",em,dedci(4)
+      write(*,*) "ep, depdci(4) ",ep,depdci(4)
 c
 c     compute the real space part of the Ewald summation
 c
       call ereal1d (eintra)
-c     write(*,*) "ep after ereal1d ",ep
-c     write(*,*) "Dipoles: ",uind(1,4),uinp(1,4)
+      write(*,*) "after ereal"
+      write(*,*) "em, dedci(4) ",em,dedci(4)
+      write(*,*) "ep, depdci(4) ",ep,depdci(4)
 c
 c     compute the Ewald self-energy term over all the atoms
 c
-      write(*,*) "ewald self"
       term = 2.0d0 * aewald * aewald
       fterm = -f * aewald / sqrtpi
       do i = 1, npole
@@ -4677,26 +4642,19 @@ c
      &            + 2.0d0*(qixy*qixy+qixz*qixz+qiyz*qiyz)
          uii = dix*uix + diy*uiy + diz*uiz
          e = fterm * (cii + term*(dii/3.0d0+2.0d0*term*qii/5.0d0))
-c Sagui Eqn 25 self term
          ei = fterm * term * uii / 3.0d0
          em = em + e
          ep = ep + ei
-c DCT dE/dci term
-         dedci(i) = dedci(i) + 2.0d0*ci*fterm
-c        write(*,*) i,"  dedci(i)    ",dedci(i)
-c        write(*,*) rpole(1,i),ci,cii
-c        write(*,*) fterm,term
-c        write(*,*) dii,qii
-c MES : adding induced part
-c        duindxdci = duinddci(1,i)
-c        duindydci = duinddci(2,i)
-c        duindzdci = duinddci(3,i)
-c        depdci(i) = depdci(i) + ( fterm * term / 3.0d0 ) 
-c    &              * ( dix * duindxdci + diy * duindydci 
-c    &                  + diz * duindzdci )
-c        write(*,*) i,"  depdci(i)    ",depdci(i)
+c DCT 
+         if (use_crgtr) then
+           dedci(i) = dedci(i) + 2.0d0*ci*fterm
+c adding in depdci for passing dedci to ect1
+           dedci(i) = dedci(i) + depdci(i)
+         end if
       end do
-c     write(*,*) "em = ",em,"    ep = ",ep
+      write(*,*) "after eself"
+      write(*,*) "em, dedci(4) ",em,dedci(4)
+      write(*,*) "ep, depdci(4) ",ep,depdci(4)
 c
 c     compute the self-energy torque term due to induced dipole
 c
@@ -4815,22 +4773,6 @@ c     intermolecular energy is total minus intramolecular part
 c
       einter = einter + em + ep - eintra
 
-c     write(*,*) "ep after self ",ep
-c     write(*,*) "Dipoles: ",uind(1,4),uinp(1,4)
-
-c     write(*,*) "dep(x,4) = ",dep(1,4)
-c     epos(iii+3) = ep
-
-c     enddo
-c end of FD test
-
-c     fd = (epos(4) - epos(2))/(2.0d0*dmu)
-c     write(*,*) "finite diff of ep = ",fd
-c     write(*,*) "     = ",fd/debye," in kcal/mol/D"
-c     fd = (epos(1) - 8.0d0*epos(2) + 8.0d0*epos(4) - epos(5))/(12*dmu)
-c     write(*,*) "finite diff of ep = ",fd
-
-
       return
       end
 c end of empole1d
@@ -4870,6 +4812,8 @@ c
       use polpot
       use shunt
       use virial
+c DCT
+      use potent
       implicit none
       integer i,j,k
       integer ii,kk,kkk
@@ -4953,7 +4897,6 @@ c
       character*6 mode
       external erfc
 c
-      write(*,*) "ereal1d"
 c
 c     zero out the intramolecular portion of the Ewald energy
 c
@@ -4977,7 +4920,6 @@ c
          pscale(i) = 1.0d0
          dscale(i) = 1.0d0
          uscale(i) = 1.0d0
-c        write(*,*) i,"  dedci(i)    ",dedci(i)
       end do
 c
 c     set conversion factor, cutoff and switching coefficients
@@ -5004,7 +4946,6 @@ c
             viro(j,i) = 0.0d0
          end do
       end do
-c     write(*,*) "npole = ",npole
 c
 c     set OpenMP directives for the major loop structure
 c
@@ -5091,7 +5032,6 @@ c
          do kkk = 1, nelst(i)
             k = elst(kkk,i)
             kk = ipole(k)
-c           write(*,*) kkk,k,kk
             xr = x(kk) - x(ii)
             yr = y(kk) - y(ii)
             zr = z(kk) - z(ii)
@@ -5194,7 +5134,6 @@ c
                dkxuip(1) = dk(2)*uinp(3,i) - dk(3)*uinp(2,i)
                dkxuip(2) = dk(3)*uinp(1,i) - dk(1)*uinp(3,i)
                dkxuip(3) = dk(1)*uinp(2,i) - dk(2)*uinp(1,i)
-c MES need d(uind)dphi and d(uinp)dphi times dphidci or dphidck
                dixr(1) = di(2)*zr - di(3)*yr
                dixr(2) = di(3)*xr - di(1)*zr
                dixr(3) = di(1)*yr - di(2)*xr
@@ -5264,7 +5203,6 @@ c MES need d(uind)dphi and d(uinp)dphi times dphidci or dphidck
      &                       + qk(8)*uinp(3,i)
                qkuip(3) = qk(3)*uinp(1,i) + qk(6)*uinp(2,i)
      &                       + qk(9)*uinp(3,i)
-c MES need d(uind)dphi and d(uinp)dphi times dphidci or dphidck
                dixqkr(1) = di(2)*qkr(3) - di(3)*qkr(2)
                dixqkr(2) = di(3)*qkr(1) - di(1)*qkr(3)
                dixqkr(3) = di(1)*qkr(2) - di(2)*qkr(1)
@@ -5283,7 +5221,6 @@ c MES need d(uind)dphi and d(uinp)dphi times dphidci or dphidck
                ukxqirp(1) = uinp(2,k)*qir(3) - uinp(3,k)*qir(2)
                ukxqirp(2) = uinp(3,k)*qir(1) - uinp(1,k)*qir(3)
                ukxqirp(3) = uinp(1,k)*qir(2) - uinp(2,k)*qir(1)
-c MES need d(uind)dphi and d(uinp)dphi times dphidci or dphidck
                rxqidk(1) = yr*qidk(3) - zr*qidk(2)
                rxqidk(2) = zr*qidk(1) - xr*qidk(3)
                rxqidk(3) = xr*qidk(2) - yr*qidk(1)
@@ -5321,7 +5258,6 @@ c    should there be for CT??
 c
 c     calculate the scalar products for induced components
 c
-c MES will need derivatives here
                sci(1) = uind(1,i)*dk(1) + uind(2,i)*dk(2)
      &                     + uind(3,i)*dk(3) + di(1)*uind(1,k)
      &                     + di(2)*uind(2,k) + di(3)*uind(3,k)
@@ -5399,20 +5335,18 @@ c
 
 c DCT energy derivatives dE/dqi
 c    includes e, ei, erl, erli
-               dedci(i) = dedci(i) + f*(bn(0)*ck - bn(1)*sc(4) 
+               if (use_crgtr) then
+                 dedci(i) = dedci(i) + f*(bn(0)*ck - bn(1)*sc(4) 
      & + bn(2)*sc(6) - (1.0d0-mscale(kk))*(rr1*ck -rr3*sc(4) 
      & + rr5*sc(6)))
-               dedci(k) = dedci(k) + f*(bn(0)*ci + bn(1)*sc(3)
+                 dedci(k) = dedci(k) + f*(bn(0)*ci + bn(1)*sc(3)
      & + bn(2)*sc(5) - (1.0d0-mscale(kk))*(rr1*ci + rr3*sc(3)
      & + rr5*sc(5)))
-               depdci(i) = depdci(i) + 0.50d0*f
+                 depdci(i) = depdci(i) + 0.50d0*f
      & *sci(4)*(rr3*psc3 - bn(1))
-               depdci(k) = depdci(k) + 0.50d0*f
+                 depdci(k) = depdci(k) + 0.50d0*f
      & *sci(3)*(bn(1) - rr3*psc3)
-
-c MES need depduind here, then duinddci
-c              write(*,*) i,"  dedci(i)    ",dedci(i)
-c              write(*,*) k,"  dedci(k)    ",dedci(k)
+               end if
 
 c
 c     increment the total intramolecular energy; assumes
@@ -5440,7 +5374,6 @@ c
                if (psc3 .ne. 0.0d0)  dorli = .true.
                if (dsc3 .ne. 0.0d0)  dorli = .true.
                if (usc3 .ne. 0.0d0)  dorli = .true.
-c              write(*,*) "dorl = ",dorl,"    dorli = ",dorli
 c
 c     zero out force and torque components without screening
 c
@@ -5477,7 +5410,6 @@ c
 c     get the permanent force without screening
 c
                if (dorl) then
-c                 write(*,*) "check 2"
                   gfr(1) = rr3*gl(0) + rr5*(gl(1)+gl(6))
      &                        + rr7*(gl(2)+gl(7)+gl(8))
      &                        + rr9*(gl(3)+gl(5)) + rr11*gl(4)
@@ -5544,7 +5476,6 @@ c
 c     get the induced force without screening
 c
                if (dorli) then
-c                 write(*,*) "check 3"
                   gfri(1) = 0.5d0*rr5*((gli(1)+gli(6))*psc3
      &                               + (glip(1)+glip(6))*dsc3
      &                               + scip(2)*usc3)
@@ -5634,7 +5565,6 @@ c
 c     correction to convert mutual to direct polarization force
 c
                if (poltyp .eq. 'DIRECT') then
-                  write(*,*) "poltyp DIRECT"
                   gfd = 0.5d0 * (bn(2)*scip(2)
      &                     - bn(3)*(scip(3)*sci(4)+sci(3)*scip(4)))
                   gfdr = 0.5d0 * (rr5*scip(2)*usc3
@@ -5699,7 +5629,6 @@ c
 c     get the permanent torque without screening
 c
                if (dorl) then
-c                 write(*,*) "check 4"
                   ttm2r(1) = -rr3*dixdk(1) + gfr(2)*dixr(1)
      &                          + gfr(4)*(dixqkr(1)+dkxqir(1)
      &                                   +rxqidk(1)-2.0d0*qixqk(1))
@@ -5767,7 +5696,6 @@ c
 c     get the induced torque without screening
 c
                if (dorli) then
-c                 write(*,*) "check 5"
                   gtri(2) = 0.5d0 * rr5 * (sci(4)*psc5+scip(4)*dsc5)
                   gtri(3) = 0.5d0 * rr5 * (sci(3)*psc5+scip(3)*dsc5)
                   gtri(4) = gfri(4)
@@ -5943,8 +5871,6 @@ c
             dem(j,i) = dem(j,i) + demo1(j,i) + demo2(j,i)
             dep(j,i) = dep(j,i) + depo1(j,i) + depo2(j,i)
          end do
-c        dedci(i) = dedci(i) 
-c        depdci(i) = depdci(i)
       end do
       do i = 1, 3
          do j = 1, 3
@@ -6030,7 +5956,7 @@ c
       real*8 cphim(4),cphid(4)
       real*8 cphip(4)
       real*8 a(3,3),ftc(10,10)
-      real*8 detdci,demdci
+c     real*8 detdci,demdci
       real*8, allocatable :: frc(:,:)
       real*8, allocatable :: trq(:,:)
       real*8, allocatable :: fuind(:,:)
@@ -6038,17 +5964,16 @@ c
       real*8, allocatable :: cmp(:,:)
       real*8, allocatable :: fmp(:,:)
       real*8, allocatable :: fphi(:,:)
-c MES
-      real*8, allocatable :: dfphidciX(:,:,:)
-      real*8, allocatable :: dcphidciX(:,:,:)
       real*8, allocatable :: fphid(:,:)
       real*8, allocatable :: fphip(:,:)
       real*8, allocatable :: fphidp(:,:)
       real*8, allocatable :: cphi(:,:)
       real*8, allocatable :: qgrip(:,:,:,:)
+      real*8, allocatable :: ei(:)
+c DCT
+      real*8, allocatable :: dfphidciX(:,:,:)
       real*8, allocatable :: tmpqgrid(:,:,:,:)
       real*8, allocatable :: dqgrpci(:,:,:,:,:)
-      real*8, allocatable :: ei(:)
 c
 c
 c     derivative indices into the fphi and fphidp arrays
@@ -6076,20 +6001,18 @@ c
       allocate (fphidp(20,npole))
       allocate (cphi(10,npole))
       allocate (dfphidciX(20,npole,npole))
-      allocate (dcphidciX(20,npole,npole))
       allocate (dqgrpci(2,nfft1,nfft2,nfft3,npole))
       allocate (ei(npole))
-
-      do i = 1 , npole
-        do k = 1,20
-          do j = 1,npole
-            dfphidciX(k,i,j) = 0.0d0
-            dcphidciX(k,i,j) = 0.0d0
+ 
+      if (use_crgtr) then
+        do i = 1 , npole
+          do k = 1,20
+            do j = 1,npole
+              dfphidciX(k,i,j) = 0.0d0
+            end do
           end do
         end do
-c dedci are zero here
-c       write(*,*) i,"  dedci(i)    ",dedci(i)
-      end do
+      end if
 c
 c     zero out the temporary virial accumulation variables
 c
@@ -6100,7 +6023,6 @@ c
       vzy = 0.0d0
       vzz = 0.0d0
 c
-      write(*,*) "Entered emrecip1"
 c     copy multipole moments and coordinates to local storage
 c
       do i = 1, npole
@@ -6118,14 +6040,11 @@ c
 c
 c     get the fractional to Cartesian transformation matrix
 c
-c     write(*,*) "Calling frac_to_cart"
       call frac_to_cart (ftc)
 c
 c     compute the arrays of B-spline coefficients
 c
       if (.not. use_polar) then
-         write(*,*) "use_polar ",use_polar
-         write(*,*) "   so calling bspline and table fill"
          call bspline_fill
          call table_fill
       end if
@@ -6139,8 +6058,6 @@ c     assign permanent and induced multipoles to PME grid
 c     and perform the 3-D FFT forward transformation
 c
       if (use_polar) then
-c MES : this is executed for regular AMOEBA
-         write(*,*) "using polar"
          do i = 1, npole
             do j = 2, 4
                cmp(j,i) = cmp(j,i) + uinp(j-1,i)
@@ -6152,6 +6069,7 @@ c see above : permanent and induced handled together here
          call grid_mpole (fmp)
 c first call is for qgrid
          call fftfront
+         if (use_crgtr) then
 c make temp var for qgrid
          do k = 1, nfft3
             do j = 1, nfft2
@@ -6206,7 +6124,6 @@ c make a copy for the different p-scaling
                   do isite = 1, npole
                     dqgrpci(1,i,j,k,isite) = dqgrdci(1,i,j,k,isite)
                     dqgrpci(2,i,j,k,isite) = dqgrdci(2,i,j,k,isite)
-c                   write(*,*) i,j,k,dqgrdci(1,i,j,k)
                   end do
                end do
             end do
@@ -6262,35 +6179,27 @@ c restore qgrid
                end do
             end do
          end do
+         end if
+c        end of use_crgtr if statement
+c back to normal calculations
+
 c qgrid zeroed out in grid_mpole each time
 c qgrip for uinp ; qgrid now contains uind
 c     both contain permanent m.p.
          do i = 1, npole
             do j = 2, 4
                cmp(j,i) = cmp(j,i) - uind(j-1,i)
-c MES : induced part removed here
+c induced part removed here
             end do
          end do
 
       else
-c MES : not executed for normal AMOEBA BUT needed for non-pol.
-         write(*,*) "not using polar"
-c        write(*,*) "Calling cmp_to_fmp"
+c not executed for normal AMOEBA BUT needed for non-pol.
          call cmp_to_fmp (cmp,fmp)
-c        write(*,*) "Calling grid_mpole"
          call grid_mpole (fmp)
-c        do k = 1, nfft3
-c           do j = 1, nfft2
-c              do i = 1, nfft1
-c                 write(*,*) i,j,k,dqgrdci(1,i,j,k)
-c                 write(*,*) i,j,k,qgrid(1,i,j,k)
-c              end do
-c           end do
-c        end do
-c        write(*,*) "Above is emrecip before fftfront"
-c        write(*,*) "Calling fftfront"
 c first call is for qgrid
          call fftfront
+         if (use_crgtr) then
 c make temp var for qgrid
          do k = 1, nfft3
             do j = 1, nfft2
@@ -6332,6 +6241,8 @@ c restore qgrid
                end do
             end do
          end do
+         end if
+c        end of use_crgtr if statement
 
 c back to normal calculations
          do k = 1, nfft3
@@ -6339,22 +6250,20 @@ c back to normal calculations
                do i = 1, nfft1
                   qgrip(1,i,j,k) = qgrid(1,i,j,k)
                   qgrip(2,i,j,k) = qgrid(2,i,j,k)
-                  do isite = 1,npole
-                    dqgrpci(1,i,j,k,isite) = dqgrdci(1,i,j,k,isite)
-                    dqgrpci(2,i,j,k,isite) = dqgrdci(2,i,j,k,isite)
-c                   write(*,*) i,j,k,dqgrdci(1,i,j,k,isite)
-c                   write(*,*) i,j,k,qgrid(1,i,j,k,isite)
-                  end do
+                  if (use_crgtr) then
+                    do isite = 1,npole
+                      dqgrpci(1,i,j,k,isite) = dqgrdci(1,i,j,k,isite)
+                      dqgrpci(2,i,j,k,isite) = dqgrdci(2,i,j,k,isite)
+                    end do
+                  end if
                end do
             end do
          end do
-c        write(*,*) "Above is emrecip after fftfront"
       end if
 c
 c     make the scalar summation over reciprocal lattice
 c for the virial
 c
-c     write(*,*) "lattice sums: nnft1 = ",nfft1
       ntot = nfft1 * nfft2 * nfft3
       pterm = (pi/aewald)**2
       volterm = pi * volbox
@@ -6418,10 +6327,9 @@ c
 c
 c
 c xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-c below not used
+c below not used for normal AMOEBA
 c
       if (use_polar .and. poltyp.eq.'DIRECT') then
-c        write (*,*) "poltyp is DIRECT and use_polar T"
          do i = 1, npole
             do j = 1, 10
                cmp(j,i) = 0.0d0
@@ -6517,12 +6425,11 @@ c
 c     transform permanent multipoles without induced dipoles
 c
       if (use_polar) then
-c MES : executed
-         write(*,*) "check 8"
          call cmp_to_fmp (cmp,fmp)
          call grid_mpole (fmp)
 c first call is for qgrid
          call fftfront
+         if (use_crgtr) then
 c make temp var for qgrid
          do k = 1, nfft3
             do j = 1, nfft2
@@ -6564,14 +6471,16 @@ c restore qgrid
                end do
             end do
          end do
+         end if
+c        end of use_crgtr if statement
+c back to normal calculations
       end if
+c     end of use_polar if statement
 c
 c     account for the zeroth grid point for a finite system
 c
       qfac(1,1,1) = 0.0d0
       if (.not. use_bounds) then
-c MES : not executed
-c        write(*,*) "check 9"
          expterm = 0.5d0 * pi / xbox
          struc2 = qgrid(1,1,1,1)**2 + qgrid(2,1,1,1)**2
          e = 0.5d0 * expterm * struc2
@@ -6586,12 +6495,15 @@ c
                term = qfac(i,j,k)
                qgrid(1,i,j,k) = term * qgrid(1,i,j,k)
                qgrid(2,i,j,k) = term * qgrid(2,i,j,k)
-               do isite = 1, npole
-                 dqgrdci(1,i,j,k,isite) =
+               if (use_crgtr) then
+                 do isite = 1, npole
+                   dqgrdci(1,i,j,k,isite) =
      &                   term * dqgrdci(1,i,j,k,isite)
-                 dqgrdci(2,i,j,k,isite) =
+                   dqgrdci(2,i,j,k,isite) =
      &                   term * dqgrdci(2,i,j,k,isite)
-               end do
+                 end do
+               end if
+c              end of use_crgtr if statement
             end do
          end do
       end do
@@ -6599,9 +6511,9 @@ c
 c     perform 3-D FFT backward transform and get potential
 c     fphi calculated from qgrid
 c
-c     write(*,*) "Calling fftback"
 c first call is for qgrid
        call fftback
+       if (use_crgtr) then
 c make temp var for qgrid
          do k = 1, nfft3
             do j = 1, nfft2
@@ -6643,29 +6555,26 @@ c restore qgrid
                end do
             end do
          end do
+      end if
+c      end of use_crgtr if statement
 
+      if (use_crgtr) then
+        call fphi_mpoleCT (fphi,dfphidciX)
+      else
+        call fphi_mpole (fphi)
+      end if
 
-c     call fphi_mpole (fphi)
-c     write(*,*) "Calling fphi_mpoleCT"
-      call fphi_mpoleCT (fphi,dfphidciX)
-c     write(*,*) "back in emrecip"
-c     write(*,*) "    electric = ",electric
-c     write(*,*) "    Pole Order    isite    jsite    dfphidciX"
       do i = 1, npole
-c        write(*,*) i,fphi(1,i),dfphidci(1,i)
          do j = 1, 20
             fphi(j,i) = electric * fphi(j,i)
-            do k = 1 , npole
-              dfphidciX(j,i,k) = electric*dfphidciX(j,i,k)
-c             if (j.eq.1) then 
-c               write(*,*) j,i,k,dfphidciX(j,i,k)
-c             endif
-            end do
+            if (use_crgtr) then
+              do k = 1 , npole
+                dfphidciX(j,i,k) = electric*dfphidciX(j,i,k)
+              end do
+            end if
          end do
       end do
-c     write(*,*) "Calling fphi_to_cphi"
-      call fphi_to_cphi (fphi,cphi,dfphidciX,dcphidciX)
-c MES : dedci are zero here
+      call fphi_to_cphi (fphi,cphi)
 
 c
 c     increment the permanent multipole energy and gradient
@@ -6673,8 +6582,9 @@ c here fphi is the field at an atomic site i
 c      (due to contributions in recip space, 
 c       but the calculation occurs in real space)
 c      em is recip energy, which is added to direct and self later
+c dfphidciX(k,j,i) is the derivative of fphi with respect to charge
+c     at multipole level k at site j due to change of charge on i
 c
-c     write(*,*) "energy and dedci calc. em = ",em
       e = 0.0d0
       do i = 1, npole
          f1 = 0.0d0
@@ -6683,13 +6593,15 @@ c     write(*,*) "energy and dedci calc. em = ",em
          ei(i) = 0.0d0
          do k = 1, 10
             e = e + fmp(k,i)*fphi(k,i)
-            ei(i) = ei(i) + fmp(k,i)*fphi(k,i)
-            do j = 1,npole
-              if (k.eq.1 .and. i.eq.j) then
-                dedciX(i) = dedciX(i) + fphi(k,j)
-              endif
-              dedciX(i) = dedciX(i) + fmp(k,j)*dfphidciX(k,j,i)
-            end do
+c           ei(i) = ei(i) + fmp(k,i)*fphi(k,i)
+            if (use_crgtr) then 
+              do j = 1,npole
+                if (k.eq.1 .and. i.eq.j) then
+                  dedciX(i) = dedciX(i) + fphi(k,j)
+                endif
+                dedciX(i) = dedciX(i) + fmp(k,j)*dfphidciX(k,j,i)
+              end do
+            endif
             f1 = f1 + fmp(k,i)*fphi(deriv1(k),i)
             f2 = f2 + fmp(k,i)*fphi(deriv2(k),i)
             f3 = f3 + fmp(k,i)*fphi(deriv3(k),i)
@@ -6703,13 +6615,13 @@ c     write(*,*) "energy and dedci calc. em = ",em
       end do
 
 c may not need factor of half for derivatives -- see SWR notes
-c     write(*,*) "Final values : "
       e = 0.5d0 * e
-      do i = 1, npole
-        dedci(i) = 0.5d0*dedciX(i)
-        ei(i) = 0.50d0*ei(i)
-c       write(*,*) i,ei(i),dedciX(i)
-      end do
+      if (use_crgtr) then 
+        do i = 1, npole
+          dedci(i) = 0.5d0*dedciX(i)
+c         ei(i) = 0.50d0*ei(i)
+        end do
+      end if
       em = em + e
       do i = 1, npole
          ii = ipole(i)
@@ -6772,8 +6684,6 @@ c
 c     convert Cartesian induced dipoles to fractional coordinates
 c
       if (use_polar) then
-c MES : executed
-c        write(*,*) "check 10"
          do i = 1, 3
             a(1,i) = dble(nfft1) * recip(i,1)
             a(2,i) = dble(nfft2) * recip(i,2)
@@ -6781,75 +6691,21 @@ c        write(*,*) "check 10"
          end do
          do i = 1, npole
             do j = 1, 3
-c fuind, fuinp = induced dipole in fractional coord
                fuind(j,i) = a(j,1)*uind(1,i) + a(j,2)*uind(2,i)
      &                          + a(j,3)*uind(3,i)
                fuinp(j,i) = a(j,1)*uinp(1,i) + a(j,2)*uinp(2,i)
      &                          + a(j,3)*uinp(3,i)
-c MES
-c              dfuinddci(j,i) = a(j,1)*duinddci(1,i) 
-c    &                          + a(j,2)*duinddci(2,i)
-c    &                          + a(j,3)*duinddci(3,i)
-c              dfuinpdci(j,i) = a(j,1)*duinpdci(1,i) 
-c    &                          + a(j,2)*duinpdci(2,i)
-c    &                          + a(j,3)*duinpdci(3,i)
             end do
          end do
 c
 c     assign PME grid and perform 3-D FFT forward transform
 c
-c        call grid_uind (fuind,fuinp)
-         call grid_uind (fuind,fuinp,dfuinddci,dfuinpdci)
-c first call is for qgrid
+         call grid_uind (fuind,fuinp)
          call fftfront
-c make temp var for qgrid
-         do k = 1, nfft3
-            do j = 1, nfft2
-               do i = 1, nfft1
-                  tmpqgrid(1,i,j,k) = qgrid(1,i,j,k)
-                  tmpqgrid(2,i,j,k) = qgrid(2,i,j,k)
-              end do
-            end do
-         end do
-c for each atom
-         do isite = 1,npole
-c copy dqgrdci of that atom to qgrid 
-           do k = 1, nfft3
-              do j = 1, nfft2
-                 do i = 1, nfft1
-                      qgrid(1,i,j,k) = dqgrdci(1,i,j,k,isite)
-                      qgrid(2,i,j,k) = dqgrdci(2,i,j,k,isite)
-                 end do
-              end do
-           end do
-c FT on qgrid
-           call fftfront
-c move FT'ed qgrid back to dqgrdci
-           do k = 1, nfft3
-              do j = 1, nfft2
-                 do i = 1, nfft1
-                   dqgrdci(1,i,j,k,isite) = qgrid(1,i,j,k)
-                   dqgrdci(2,i,j,k,isite) = qgrid(2,i,j,k)
-                 end do
-              end do
-           end do
-         end do
-c restore qgrid
-         do k = 1, nfft3
-            do j = 1, nfft2
-               do i = 1, nfft1
-                  qgrid(1,i,j,k) = tmpqgrid(1,i,j,k)
-                  qgrid(2,i,j,k) = tmpqgrid(2,i,j,k)
-               end do
-            end do
-         end do
-c back to normal part of calculations
 c
 c     account for the zeroth grid point for a finite system
 c
          if (.not. use_bounds) then
-c MES not executed
-c           write(*,*) "check 11"
             expterm = 0.5d0 * pi / xbox
             struc2 = qgrid(1,1,1,1)**2 + qgrid(2,1,1,1)**2
             e = 0.5d0 * expterm * struc2
@@ -6863,78 +6719,27 @@ c
                   term = qfac(i,j,k)
                   qgrid(1,i,j,k) = term * qgrid(1,i,j,k)
                   qgrid(2,i,j,k) = term * qgrid(2,i,j,k)
-                  do isite = 1, npole
-c                   dqgrdci(1,i,j,k,isite) = 
-c    &                     term * dqgrdci(1,i,j,k,isite)
-c                   dqgrdci(2,i,j,k,isite) = 
-c    &                     term * dqgrdci(2,i,j,k,isite)
-                  end do
                end do
             end do
          end do
 c
 c     perform 3-D FFT backward transform and get potential
 c
-c first call is for qgrid
          call fftback
-c make temp var for qgrid
-         do k = 1, nfft3
-            do j = 1, nfft2
-               do i = 1, nfft1
-                  tmpqgrid(1,i,j,k) = qgrid(1,i,j,k)
-                  tmpqgrid(2,i,j,k) = qgrid(2,i,j,k)
-              end do
-            end do
-         end do
-c for each atom
-         do isite = 1,npole
-c copy dqgrdci of that atom to qgrid 
-           do k = 1, nfft3
-              do j = 1, nfft2
-                 do i = 1, nfft1
-                      qgrid(1,i,j,k) = dqgrdci(1,i,j,k,isite)
-                      qgrid(2,i,j,k) = dqgrdci(2,i,j,k,isite)
-                 end do
-              end do
-           end do
-c FT on qgrid
-           call fftback
-c move FT'ed qgrid back to dqgrdci
-           do k = 1, nfft3
-              do j = 1, nfft2
-                 do i = 1, nfft1
-                   dqgrdci(1,i,j,k,isite) = qgrid(1,i,j,k)
-                   dqgrdci(2,i,j,k,isite) = qgrid(2,i,j,k)
-                 end do
-              end do
-           end do
-         end do
-c restore qgrid
-         do k = 1, nfft3
-            do j = 1, nfft2
-               do i = 1, nfft1
-                  qgrid(1,i,j,k) = tmpqgrid(1,i,j,k)
-                  qgrid(2,i,j,k) = tmpqgrid(2,i,j,k)
-               end do
-            end do
-         end do
-c back to normal part of calculations
          call fphi_uind (fphid,fphip,fphidp)
          do i = 1, npole
-c MES
-c           dfphiddci(1,i) = electric * dfphiddci(1,i)
-c           dfphipdci(1,i) = electric * dfphipdci(1,i)
             do j = 1, 10
                fphid(j,i) = electric * fphid(j,i)
                fphip(j,i) = electric * fphip(j,i)
             end do
             do j = 1, 20
                fphidp(j,i) = electric * fphidp(j,i)
-c              dfphidpdci(j,i) = electric * dfphidpdci(j,i)
             end do
          end do
 c
 c     increment the induced dipole energy and gradient
+c fuind*fphi is the induced dipole times the field
+c fphi is same as above for perm m.p. energy
 c
          e = 0.0d0
          do i = 1, npole
@@ -6945,12 +6750,9 @@ c
                j1 = deriv1(k+1)
                j2 = deriv2(k+1)
                j3 = deriv3(k+1)
-c Sagui Eqn 2.9 recip part with only induced dipole part
                e = e + fuind(k,i)*fphi(k+1,i)
-c MES need to check indexes !!
                do j = 1,npole
-c                depdciX(i) = depdciX(i) + fuind(k,j)*dfphidciX(k+1,j,i)
-c    &                        + dfuinddci(k,i)*fphi(k+1,i)
+                  depdci(i) = depdci(i) + fuind(k,j)*dfphidciX(k+1,j,i)
                end do
                f1 = f1 + (fuind(k,i)+fuinp(k,i))*fphi(j1,i)
      &                 + fuind(k,i)*fphip(j1,i)
@@ -6985,8 +6787,9 @@ c    &                        + dfuinddci(k,i)*fphi(k+1,i)
          e = 0.5d0 * e
          ep = ep + e
          do i = 1, npole
-            depdci(i) = 0.5d0*depdciX(i)
-c           write(*,*) i,"    depdci(i)    ",depdci(i)
+            depdci(i) = 0.5d0*depdci(i)
+         end do
+         do i = 1, npole
             ii = ipole(i)
             dep(1,ii) = dep(1,ii) + frc(1,i)
             dep(2,ii) = dep(2,ii) + frc(2,i)
@@ -7000,8 +6803,7 @@ c
                fphidp(k,i) = 0.5d0 * fphidp(k,i)
             end do
          end do
-c        call fphi_to_cphi (fphidp,cphi)
-         call fphi_to_cphi (fphidp,cphi,dfphidciX,dcphidciX)
+         call fphi_to_cphi (fphidp,cphi)
 c
 c     distribute torques into the induced dipole gradient
 c
@@ -7111,7 +6913,6 @@ c
 c
 c     perform deallocation of some local arrays
 c
-      write(*,*) "End of emrecip"
       deallocate (tmpqgrid)
       deallocate (frc)
       deallocate (trq)
@@ -7125,7 +6926,6 @@ c
       deallocate (fphidp)
       deallocate (cphi)
       deallocate (dfphidciX)
-      deallocate (dcphidciX)
       deallocate (dqgrpci)
       return
       end

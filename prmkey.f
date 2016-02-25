@@ -36,9 +36,6 @@ c
       character*120 record
       character*120 string
 c
-c MES : default use_grad
-      use_grad = .false.
-c
 c     parse the line to extract any possible keyword
 c
       record = text
@@ -460,7 +457,7 @@ c
       use_metal = .false.
       use_geom = .false.
       use_extra = .false.
-      use_crgtr = .false.
 c DCT added variable
+      use_crgtr = .false.
       return
       end

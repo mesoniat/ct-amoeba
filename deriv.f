@@ -68,8 +68,5 @@ c
       real*8, allocatable :: delf(:,:)
       real*8, allocatable :: deg(:,:)
       real*8, allocatable :: dex(:,:)
-c MES : for CT - derivatives of HB number wrt distance
-      real*8, allocatable :: dnacti(:)
-      real*8, allocatable :: dndcti(:)
       save
       end
