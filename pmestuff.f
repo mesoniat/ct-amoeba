@@ -1451,8 +1451,7 @@ c     "fphi_to_cphi" transforms the reciprocal space potential from
 c     fractional to Cartesian coordinates
 c
 c
-c     subroutine fphi_to_cphi (fphi,cphi)
-      subroutine fphi_to_cphi (fphi,cphi,dfphidciX,dcphidciX)
+      subroutine fphi_to_cphi (fphi,cphi)
       use sizes
       use mpole
       implicit none
@@ -1460,8 +1459,8 @@ c     subroutine fphi_to_cphi (fphi,cphi)
       real*8 ftc(10,10)
       real*8 cphi(10,*)
       real*8 fphi(20,*)
-      real*8 dfphidciX(20,npole,*)
-      real*8 dcphidciX(20,npole,*)
+c     real*8 dfphidciX(20,npole,*)
+c     real*8 dcphidciX(20,npole,*)
 c
 c     write(*,*) "Entered fphi_to_cphi"
 c
@@ -1474,37 +1473,21 @@ c     apply the transformation to get the Cartesian potential
 c
       do i = 1, npole
          cphi(1,i) = ftc(1,1) * fphi(1,i)
-         do ii = 1, npole
-c          dcphidciX(1,i,ii) = ftc(1,1)*dfphidciX(1,i,ii)
-         end do
-
          do j = 2, 4
             cphi(j,i) = 0.0d0
-
             do k = 2, 4
                cphi(j,i) = cphi(j,i) + ftc(j,k)*fphi(k,i)
-               do ii = 1, npole
-c                dcphidciX(j,i,ii) = dcphidciX(j,i,ii)
-c    & + ftc(j,k)*dfphidciX(k,i,ii)
-               end do
             end do
 c           end of k
-
          end do
 c        end of j
 
          do j = 5, 10
             cphi(j,i) = 0.0d0
-
             do k = 5, 10
                cphi(j,i) = cphi(j,i) + ftc(j,k)*fphi(k,i)
-               do ii = 1, npole
-c                dcphidciX(j,i,ii) = dcphidciX(j,i,ii)
-c    & + ftc(j,k)*dfphidciX(k,i,ii)
-               end do
             end do
 c           end of k
-
          end do
 c        end of j
 
@@ -2024,3 +2007,81 @@ c
       return
       end
 c     end of fphi_mpoleCT
+
+c
+c
+c     ################################################################
+c     ##                                                            ##
+c     ##  subroutine fphi_to_cphiCT  --  transformation of potential  ##
+c     ##                                                            ##
+c     ################################################################
+c
+c
+c     "fphi_to_cphiCT" transforms the reciprocal space potential from
+c     fractional to Cartesian coordinates
+c     routine for CT adds conversion of dfphidciX to dcphidciX
+c
+c
+
+      subroutine fphi_to_cphiCT (fphi,cphi,dfphidciX,dcphidciX)
+      use sizes
+      use mpole
+      implicit none
+      integer i,j,k,ii
+      real*8 ftc(10,10)
+      real*8 cphi(10,*)
+      real*8 fphi(20,*)
+      real*8 dfphidciX(20,npole,*)
+      real*8 dcphidciX(20,npole,*)
+c
+c     write(*,*) "Entered fphi_to_cphi"
+c
+c     find the matrix to convert fractional to Cartesian
+c
+c     write(*,*) "Calling frac_to_cart"
+      call frac_to_cart (ftc)
+c
+c     apply the transformation to get the Cartesian potential
+c
+      do i = 1, npole
+         cphi(1,i) = ftc(1,1) * fphi(1,i)
+         do ii = 1, npole
+           dcphidciX(1,i,ii) = ftc(1,1)*dfphidciX(1,i,ii)
+         end do
+
+         do j = 2, 4
+            cphi(j,i) = 0.0d0
+
+            do k = 2, 4
+               cphi(j,i) = cphi(j,i) + ftc(j,k)*fphi(k,i)
+               do ii = 1, npole
+                 dcphidciX(j,i,ii) = dcphidciX(j,i,ii)
+     & + ftc(j,k)*dfphidciX(k,i,ii)
+               end do
+            end do
+c           end of k
+
+         end do
+c        end of j
+
+         do j = 5, 10
+            cphi(j,i) = 0.0d0
+
+            do k = 5, 10
+               cphi(j,i) = cphi(j,i) + ftc(j,k)*fphi(k,i)
+               do ii = 1, npole
+                 dcphidciX(j,i,ii) = dcphidciX(j,i,ii)
+     & + ftc(j,k)*dfphidciX(k,i,ii)
+               end do
+            end do
+c           end of k
+
+         end do
+c        end of j
+
+      end do
+c     end of i
+
+c     write(*,*) "End of fphi_to_cphi"
+      return
+      end

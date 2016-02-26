@@ -216,6 +216,8 @@ c
 c DCT 
       real*8, allocatable :: dfielddci(:,:,:)
       real*8, allocatable :: dfieldpdci(:,:,:)
+      real*8, allocatable :: dconj(:,:,:)
+      real*8, allocatable :: dconjp(:,:,:)
       real*8, allocatable :: test(:,:,:)
       logical done
       character*6 mode
@@ -275,6 +277,9 @@ c
             end do
          end do
       end do
+c MES duinddci good here
+c     write(*,*) "effect on 3 by 4",uind(1,3),duinddci(1,3,4)
+c     write(*,*) "effect on 4 by 4",uind(1,4),duinddci(1,4,4)
 c
 c     set tolerances for computation of mutual induced dipoles
 c
@@ -316,6 +321,9 @@ c
          allocate (conjp(3,npole))
          allocate (vec(3,npole))
          allocate (vecp(3,npole))
+c DCT
+         allocate (dconj(3,npole,npole))
+         allocate (dconjp(3,npole,npole))
 c
 c     get the electrostatic field due to induced dipoles
 c
@@ -328,6 +336,9 @@ c           call ufield0c (field,fieldp)
          else
             call ufield0a (field,fieldp)
          end if
+c MES duinddci good here
+c     write(*,*) "effect on 3 by 4",uind(1,3),duinddci(1,3,4)
+c     write(*,*) "effect on 4 by 4",uind(1,4),duinddci(1,4,4)
 c
 c     set initial conjugate gradient residual and conjugate vector
 c MES : not sure if I need derivatives in the conj grad part
@@ -357,11 +368,14 @@ c
                conjp(j,i) = zrsdp(j,i)
             end do
          end do
+c     write(*,*) "effect on 3 by 4",uind(1,3),duinddci(1,3,4)
+c     write(*,*) "effect on 4 by 4",uind(1,4),duinddci(1,4,4)
+c     write(*,*) "effect on 3 by 4",conj(1,3),dconj(1,3,4)
+c     write(*,*) "effect on 4 by 4",conj(1,4),dconj(1,4,4)
 c
 c     conjugate gradient iteration of the mutual induced dipoles
 c
          write(*,*) "Done with setup. Starting loop."
-         poleps = 0.00000001d0
          write(*,*) "dipole tolerance = ",poleps
          do while (.not. done)
             iter = iter + 1
@@ -417,7 +431,7 @@ c new trial uind; rsd used in tolerance calc.
                end do
             end do
             if (use_mlist) then
-c calc zrsd(p)
+c calc zrsd
                call uscale0b (mode,rsd,rsdp,zrsd,zrsdp)
             else
                call uscale0a (mode,rsd,rsdp,zrsd,zrsdp)
@@ -476,6 +490,8 @@ c
          deallocate (conjp)
          deallocate (vec)
          deallocate (vecp)
+         deallocate (dconj)
+         deallocate (dconjp)
 c
 c     print the results from the conjugate gradient iteration
 c
@@ -505,6 +521,9 @@ c
       deallocate (dfieldpdci)
       deallocate (udir)
       deallocate (udirp)
+
+      write(*,*) "effect on 3 by 4",uind(1,3),duinddci(1,3,4)
+      write(*,*) "effect on 4 by 4",uind(1,4),duinddci(1,4,4)
 
       write(*,*) "Done with induce0a."
       return
@@ -1514,6 +1533,8 @@ c     call udirect1 (field)
             end do
          end do
       end do
+c MES dfielddci correct
+c     write(*,*) "effect on 3 by 4",field(1,3),dfielddci(1,3,4)
 c
 c     get the real space portion of the electrostatic field
 c
@@ -1523,6 +1544,7 @@ c        call udirect2b (field,fieldp)
       else
          call udirect2a (field,fieldp)
       end if
+c     write(*,*) "effect on 3 by 4",field(1,3),dfielddci(1,3,4)
 c
 c     get the self-energy portion of the electrostatic field
 c
@@ -1639,6 +1661,12 @@ c
             end do
          end do
       end do
+      write(*,*) "field"
+      write(*,*) "effect on 3 by 4",field(1,3),dfielddci(1,3,4)
+      write(*,*) "effect on 4 by 4",field(1,4),dfielddci(1,4,4)
+      write(*,*) "uind"
+      write(*,*) "effect on 3 by 4",uind(1,3),duinddci(1,3,4)
+      write(*,*) "effect on 4 by 4",uind(1,4),duinddci(1,4,4)
 c
 c     compute the cell dipole boundary correction to the field
 c
@@ -1937,13 +1965,15 @@ c back to normal part of calculations
 c MES dqgrdci OK up to this point
       call fphi_mpoleCT (fphi,dfphidciX)
 c     call fphi_mpole (fphi)
+c     write(*,*) "effect on 3 by 4",fphi(2,3),dfphidciX(2,3,4)
+c MES dfphidciX good here
 c
 c     convert the field from fractional to Cartesian
 c
 c     call fphi_to_cphi (fphi,cphi)
-      call fphi_to_cphi (fphi,cphi,dfphidciX,dcphidciX)
+      call fphi_to_cphiCT (fphi,cphi,dfphidciX,dcphidciX)
 c     write(*,*) "i    j    k    cphi(k,i)   dcphidciX(k,i,j)"
-c     write(*,*) "1    4    2",cphi(2,1),dcphidciX(2,1,4)
+c     write(*,*) "3    4    2",cphi(2,3),dcphidciX(2,3,4)
 c     write(*,*) "4    4    2",cphi(2,4),dcphidciX(2,4,4)
 c
 c     increment the field at each multipole site
@@ -1965,6 +1995,7 @@ c        write(*,*) "        j = ",j
 c        write(*,*) dfielddci(1,i,j),dfielddci(2,i,j),dfielddci(3,i,j)
          end do
       end do
+c     write(*,*) "effect on 3 by 4",field(1,3),dfielddci(1,3,4)
 c
 c     perform deallocation of some local arrays
 c
@@ -6073,6 +6104,7 @@ c
 c
 c     "uscale0b" builds and applies a preconditioner for the conjugate
 c     gradient induced dipole solver using a neighbor pair list
+c     zrsd, zrsdp are converted to conj, conjp in induce0a
 c
 c
       subroutine uscale0b (mode,rsd,rsdp,zrsd,zrsdp)

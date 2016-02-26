@@ -440,10 +440,10 @@ c hydrogen charges
       enddo
  
 c for testing dedci
-c     dq = 0.00000d0
-c     write(*,*) "dq = ",dq
-c     rpole(1,4) = rpole(1,4) + dq
-c     write(*,*) "q(4) = ",rpole(1,4)
+      dq = 0.0000d0
+      write(*,*) "dq = ",dq
+      rpole(1,4) = rpole(1,4) + dq
+      write(*,*) "q(4) = ",rpole(1,4)
 c     write(*,*) "q(3) = ",rpole(1,3)
 
 c copy new charge to other reference frame
