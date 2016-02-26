@@ -101,6 +101,10 @@ c
       if (allocated(pdamp))  deallocate (pdamp)
       if (allocated(uind))  deallocate (uind)
       if (allocated(uinp))  deallocate (uinp)
+         if (allocated(duinddci))  deallocate (duinddci)
+         if (allocated(duinpdci))  deallocate (duinpdci)
+         if (allocated(dfuinddci))  deallocate (dfuinddci)
+         if (allocated(dfuinpdci))  deallocate (dfuinpdci)
       if (allocated(uinds))  deallocate (uinds)
       if (allocated(uinps))  deallocate (uinps)
       allocate (polarity(n))
@@ -108,8 +112,13 @@ c
       allocate (pdamp(n))
       allocate (uind(3,n))
       allocate (uinp(3,n))
+         allocate (duinddci(3,n,n))
+         allocate (duinpdci(3,n,n))
+         allocate (dfuinddci(3,n,n))
+         allocate (dfuinpdci(3,n,n))
       allocate (uinds(3,n))
       allocate (uinps(3,n))
+
 c
 c     find and store the atomic dipole polarizability parameters
 c

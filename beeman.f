@@ -48,10 +48,6 @@ c
       real*8, allocatable :: zold(:)
       real*8, allocatable :: derivs(:,:)
 c
-      do i = 1,n
-        write(*,*) x(i),y(i),z(i)
-      enddo
-
 c
 c     set time values and coefficients for Beeman integration
 c

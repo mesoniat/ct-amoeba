@@ -50,7 +50,7 @@ c     offset used to shift sites off exact lattice bounds
 c
       eps = 1.0d-8
 c
-c     write(*,*) "get the B-spline coefficients for each atomic site"
+      write(*,*) "get the B-spline coefficients for each atomic site"
 c
       do i = 1, n
          xi = x(i)
@@ -212,6 +212,7 @@ c
       logical posx,posy,posz
       logical midx,midy,midz
 c
+c     write(*,*) "table_fill"
 c
 c     zero out the PME table marking chunks per site
 c
@@ -387,6 +388,7 @@ c
       real*8 v0,u0,t0
       real*8 term
 c
+      write(*,*) "Entered grid_pchg"
 c
 c     zero out the particle mesh Ewald charge grid
 c
@@ -464,6 +466,7 @@ c     end OpenMP directive for the major loop structure
 c
 !$OMP END DO
 !$OMP END PARALLEL
+      write(*,*) "Done with grid_pchg"
       return
       end
 c
@@ -485,8 +488,6 @@ c
       use chunks
       use mpole
       use pme
-c DCT
-      use potent
       implicit none
       integer i,j,k,m
       integer ii,jj,kk
@@ -503,6 +504,8 @@ c DCT
       real*8 term0,term1,term2
       real*8 fmp(10,*)
 c
+c     write(*,*) "Entered grid_mpole"
+c     write(*,*) "    nchunk = ",nchunk
 c
 c     zero out the particle mesh Ewald charge grid
 c
@@ -511,12 +514,10 @@ c
             do i = 1, nfft1
                qgrid(1,i,j,k) = 0.0d0
                qgrid(2,i,j,k) = 0.0d0
-               if (use_crgtr) then 
-                 do isite = 1,npole 
-                   dqgrdci(1,i,j,k,isite) = 0.0d0
-                   dqgrdci(2,i,j,k,isite) = 0.0d0
-                 end do
-               end if
+               do isite = 1,npole 
+                 dqgrdci(1,i,j,k,isite) = 0.0d0
+                 dqgrdci(2,i,j,k,isite) = 0.0d0
+               end do
             end do
          end do
       end do
@@ -587,13 +588,14 @@ c
                         t2 = thetai1(3,m,iatm)
                         qgrid(1,i,j,k) = qgrid(1,i,j,k) + term0*t0
      &                                      + term1*t1 + term2*t2
-                        if (use_crgtr) then
-c DCT    dfmpdci = 1
-c dqgrdci(1,i,j,k,isite) is the change in qgrid(1,i,j,k) 
-c     due to a change in charge on isite
-                          dqgrdci(1,i,j,k,isite)=dqgrdci(1,i,j,k,isite) 
+c MES    dfmpdci = 1
+                        dqgrdci(1,i,j,k,isite) = dqgrdci(1,i,j,k,isite) 
      & + u0*v0*t0
-                        endif
+c                       if ( i.eq.11 .and. j.eq.8 .and. k.eq.7 ) then
+c                         write(*,*) i,j,k,isite
+c                         write(*,*) qgrid(1,i,j,k),
+c    & dqgrdci2(1,i,j,k), dqgrdci(1,i,j,k,isite)
+c                       endif
                      end do
                   end do
                end do
@@ -606,6 +608,21 @@ c
 !$OMP END DO
 !$OMP END PARALLEL
 
+c     write(*,*) "outside OMP parallel"
+c     do k = 1, nfft3
+c        do j = 1, nfft2
+c           do i = 1, nfft1
+c              if(qgrid(1,i,j,k).ne.0.000000d0) then
+c                write(*,*) i,j,k,dqgrdci(1,i,j,k)
+c                write(*,*) i,j,k,qgrid(1,i,j,k)
+c              end if
+c           end do
+c        end do
+c     end do
+c     write(*,*) "11,8,7",qgrid(1,11,8,7),dqgrdci(1,11,8,7)
+
+
+c     write(*,*) "Done with grid_mpole"
       return
       end
 c
@@ -621,7 +638,8 @@ c     "grid_uind" places the fractional induced dipoles onto the
 c     particle mesh Ewald grid
 c
 c
-      subroutine grid_uind (fuind,fuinp)
+c     subroutine grid_uind (fuind,fuinp)
+      subroutine grid_uind (fuind,fuinp,dfuinddci,dfuinpdci)
       use sizes
       use atoms
       use chunks
@@ -637,13 +655,27 @@ c
       integer nearpt(3)
       integer abound(6)
       integer cbound(6)
+      real*8, allocatable :: dterm01dci(:)
+      real*8, allocatable :: dterm11dci(:)
+      real*8, allocatable :: dterm02dci(:)
+      real*8, allocatable :: dterm12dci(:)
+      real*8, allocatable :: dqgrdciX(:,:,:,:,:,:)
       real*8 v0,u0,t0
       real*8 v1,u1,t1
       real*8 term01,term11
       real*8 term02,term12
       real*8 fuind(3,*)
       real*8 fuinp(3,*)
+      real*8 dfuinddci(3,npole,*)
+      real*8 dfuinpdci(3,npole,*)
+
+      allocate(dterm01dci(npole))
+      allocate(dterm11dci(npole))
+      allocate(dterm02dci(npole))
+      allocate(dterm12dci(npole))
+      allocate(dqgrdciX(2,nfft1,nfft2,nfft3,npole,npole))
 c
+      write(*,*) "Entered grid_uind"
 c
 c     zero out the particle mesh Ewald charge grid
 c
@@ -652,6 +684,10 @@ c
             do i = 1, nfft1
                qgrid(1,i,j,k) = 0.0d0
                qgrid(2,i,j,k) = 0.0d0
+               do isite = 1, npole
+                 dqgrdci(1,i,j,k,isite) = 0.0d0
+                 dqgrdci(2,i,j,k,isite) = 0.0d0
+               end do
             end do
          end do
       end do
@@ -711,6 +747,19 @@ c
                      term02 = fuinp(2,isite)*u1*v0
      &                           + fuinp(3,isite)*u0*v1
                      term12 = fuinp(1,isite)*u0*v0
+c MES
+                     do jsite = 1, npole
+                        dterm01dci(jsite) = 
+     &                             dfuinddci(2,isite,jsite)*u1*v0
+     &                           + dfuinddci(3,isite,jsite)*u0*v1
+                        dterm11dci(jsite) = 
+     &                             dfuinddci(1,isite,jsite)*u0*v0
+                        dterm02dci(jsite) = 
+     &                             dfuinpdci(2,isite,jsite)*u1*v0
+     &                           + dfuinpdci(3,isite,jsite)*u0*v1
+                        dterm12dci(jsite) = 
+     &                             dfuinpdci(1,isite,jsite)*u0*v0
+                     end do
                      do ii = abound(1), abound(2)
                         i = ii
                         m = i + offsetx
@@ -721,12 +770,30 @@ c
      &                                      + term11*t1
                         qgrid(2,i,j,k) = qgrid(2,i,j,k) + term02*t0
      &                                      + term12*t1
+c MES
+                        do jsite = 1, npole
+                           dqgrdci(1,i,j,k,isite) = 
+     & dqgrdci(1,i,j,k,isite)
+     & + dterm01dci(jsite)*t0 + dterm11dci(jsite)*t1
+                           dqgrdci(2,i,j,k,isite) =
+     & dqgrdci(2,i,j,k,isite)
+     & + dterm02dci(jsite)*t0 + dterm12dci(jsite)*t1
 
+                           dqgrdciX(1,i,j,k,isite,jsite) = 
+     & + dterm01dci(jsite)*t0 + dterm11dci(jsite)*t1
+                           dqgrdciX(2,i,j,k,isite,jsite) = 
+     & + dterm02dci(jsite)*t0 + dterm12dci(jsite)*t1
+                        end do
+                        if (i.eq.10 .and. j.eq.8 .and. k.eq.7) then
+                          write(*,*) i,j,k,isite
+                          write(*,*) term01,dterm01dci(4)
+                          write(*,*) qgrid(1,i,j,k),
+     & dqgrdci(1,i,j,k,isite),dqgrdciX(2,i,j,k,isite,4)
+                        end if
                      end do
                   end do
                end do
             end if
-c           end of pmetable statement
          end do
       end do
 c
@@ -735,6 +802,13 @@ c
 !$OMP END DO
 !$OMP END PARALLEL
 
+      deallocate(dterm01dci)
+      deallocate(dterm11dci)
+      deallocate(dterm02dci)
+      deallocate(dterm12dci)
+      deallocate(dqgrdciX)
+
+      write(*,*) "Done with grid_uind"
       return
       end
 c
@@ -820,6 +894,8 @@ c
       real*8 dtuv000dqg,dt0,dtu00, dtuv000
       real*8 fphi(20,*)
 c
+      write(*,*) "Entered fphi_mpole"
+c     write(*,*) "bsorder = ",bsorder
 c
 c     set OpenMP directives for the major loop structure
 c
@@ -834,6 +910,8 @@ c
          igrd0 = igrid(1,iatm)
          jgrd0 = igrid(2,iatm)
          kgrd0 = igrid(3,iatm)
+c        location of isite on grid
+c        write(*,*) "isite ",isite,"   iatm ",iatm,"   igrd0 ",igrd0
          tuv000 = 0.0d0
          tuv001 = 0.0d0
          tuv010 = 0.0d0
@@ -959,6 +1037,8 @@ c
 !$OMP END DO
 !$OMP END PARALLEL
 
+      write(*,*) "end of fphi_mpole"
+
       return
       end
 c     end of fphi_mpole
@@ -1011,6 +1091,7 @@ c
       real*8 fdip_phi2(10,*)
       real*8 fdip_sum_phi(20,*)
 c
+      write(*,*) "Entered fphi_uind"
 c
 c     set OpenMP directives for the major loop structure
 c
@@ -1232,6 +1313,7 @@ c     end OpenMP directive for the major loop structure
 c
 !$OMP END DO
 !$OMP END PARALLEL
+      write(*,*) "Done with fphi_uind"
       return
       end
 c
@@ -1256,15 +1338,19 @@ c
       real*8 cmp(10,*)
       real*8 fmp(10,*)
 c
+c     write(*,*) "Entered cmp_to_fmp"
 c
 c     find the matrix to convert Cartesian to fractional
 c
+c     write(*,*) "calling cart_to_frac"
       call cart_to_frac (ctf)
+c     write(*,*) "    ctf(1,1) = ",ctf(1,1)
 c
 c     apply the transformation to get the fractional multipoles
 c
       do i = 1, npole
          fmp(1,i) = ctf(1,1) * cmp(1,i)
+c        write(*,*) i,fmp(1,i),cmp(1,i)
          do j = 2, 4
             fmp(j,i) = 0.0d0
             do k = 2, 4
@@ -1278,6 +1364,7 @@ c
             end do
          end do
       end do
+c     write(*,*) "End of cmp_to_fmp"
       return
       end
 c
@@ -1364,7 +1451,8 @@ c     "fphi_to_cphi" transforms the reciprocal space potential from
 c     fractional to Cartesian coordinates
 c
 c
-      subroutine fphi_to_cphi (fphi,cphi)
+c     subroutine fphi_to_cphi (fphi,cphi)
+      subroutine fphi_to_cphi (fphi,cphi,dfphidciX,dcphidciX)
       use sizes
       use mpole
       implicit none
@@ -1372,35 +1460,58 @@ c
       real*8 ftc(10,10)
       real*8 cphi(10,*)
       real*8 fphi(20,*)
+      real*8 dfphidciX(20,npole,*)
+      real*8 dcphidciX(20,npole,*)
 c
+c     write(*,*) "Entered fphi_to_cphi"
 c
 c     find the matrix to convert fractional to Cartesian
 c
+c     write(*,*) "Calling frac_to_cart"
       call frac_to_cart (ftc)
 c
 c     apply the transformation to get the Cartesian potential
 c
       do i = 1, npole
          cphi(1,i) = ftc(1,1) * fphi(1,i)
+         do ii = 1, npole
+c          dcphidciX(1,i,ii) = ftc(1,1)*dfphidciX(1,i,ii)
+         end do
+
          do j = 2, 4
             cphi(j,i) = 0.0d0
+
             do k = 2, 4
                cphi(j,i) = cphi(j,i) + ftc(j,k)*fphi(k,i)
+               do ii = 1, npole
+c                dcphidciX(j,i,ii) = dcphidciX(j,i,ii)
+c    & + ftc(j,k)*dfphidciX(k,i,ii)
+               end do
             end do
 c           end of k
+
          end do
 c        end of j
+
          do j = 5, 10
             cphi(j,i) = 0.0d0
+
             do k = 5, 10
                cphi(j,i) = cphi(j,i) + ftc(j,k)*fphi(k,i)
+               do ii = 1, npole
+c                dcphidciX(j,i,ii) = dcphidciX(j,i,ii)
+c    & + ftc(j,k)*dfphidciX(k,i,ii)
+               end do
             end do
 c           end of k
+
          end do
 c        end of j
+
       end do
 c     end of i
 
+c     write(*,*) "End of fphi_to_cphi"
       return
       end
 c
@@ -1492,9 +1603,8 @@ c     ##                                                            ##
 c     ################################################################
 c
 c
-c     "fphi_mpoleCT" extracts the permanent multipole potential 
-c     and the derivative of the potential with respect to charge
-c     from the particle mesh Ewald grid 
+c     "fphi_mpoleCT" extracts the permanent multipole potential from
+c     the particle mesh Ewald grid
 c
 c
       subroutine fphi_mpoleCT (fphi,dfphidciX)
@@ -1555,6 +1665,10 @@ c
 
       real*8 fphi(20,*)
       real*8 dfphidciX(20,npole,npole)
+c
+      write(*,*) "Entered fphi_mpoleCT"
+c     write(*,*) "bsorder = ",bsorder
+c     write(*,*) ""
 
       allocate (xdt0(npole))
       allocate (xdt1(npole))
@@ -1607,6 +1721,8 @@ c
          igrd0 = igrid(1,iatm)
          jgrd0 = igrid(2,iatm)
          kgrd0 = igrid(3,iatm)
+c        location of isite on grid
+c        write(*,*) "isite ",isite,"   iatm ",iatm,"   igrd0 ",igrd0
 
          tuv000 = 0.0d0
          tuv001 = 0.0d0
@@ -1712,6 +1828,14 @@ c    due to change in charge at jsite
                do it1 = 1, bsorder
                   i0 = i0 + 1
                   i = i0 + 1 + (nfft1-isign(nfft1,i0))/2
+
+c                 if ( i.eq.11 .and. j.eq.8 .and. k.eq.7 ) then
+c                   write(*,*) i,j,k,isite
+c                   write(*,*) qgrid(1,i,j,k),dqgrdci2(1,i,j,k)
+c                   do jsite = 1 , npole
+c                     write(*,*) dqgrdci(1,i,j,k,jsite)
+c                   end do
+c                 endif
 
                   tq = qgrid(1,i,j,k)
                   t0 = t0 + tq*thetai1(1,it1,iatm)
@@ -1896,6 +2020,7 @@ c
       deallocate (xdtuv012)
       deallocate (xdtuv111)
 
+      write(*,*) "End of fphi_mpoleCT"
       return
       end
 c     end of fphi_mpoleCT

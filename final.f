@@ -566,6 +566,10 @@ c
       if (allocated(pdamp))  deallocate (pdamp)
       if (allocated(uind))  deallocate (uind)
       if (allocated(uinp))  deallocate (uinp)
+      if (allocated(duinddci))  deallocate (duinddci)
+      if (allocated(duinpdci))  deallocate (duinpdci)
+      if (allocated(dfuinddci))  deallocate (dfuinddci)
+      if (allocated(dfuinpdci))  deallocate (dfuinpdci)
       if (allocated(uinds))  deallocate (uinds)
       if (allocated(uinps))  deallocate (uinps)
 c

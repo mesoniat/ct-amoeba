@@ -173,8 +173,8 @@ c     ect set to zero in ect1 subroutine
 c     This is ok because dedci and ect are only used with CT routines
 c         Their values are added to dem and em for later use
 c MES debug
-      dr = 0.000d0
-      x(4) = x(4) + dr
+c     dr = 0.000d0
+c     x(4) = x(4) + dr
 c
 c     maintain any periodic boundary conditions
 c
@@ -440,11 +440,11 @@ c hydrogen charges
       enddo
  
 c for testing dedci
-      dq = 0.00000d0
-      write(*,*) "dq = ",dq
-      rpole(1,4) = rpole(1,4) + dq
-      write(*,*) "q(4) = ",rpole(1,4)
-      write(*,*) "q(3) = ",rpole(1,3)
+c     dq = 0.00000d0
+c     write(*,*) "dq = ",dq
+c     rpole(1,4) = rpole(1,4) + dq
+c     write(*,*) "q(4) = ",rpole(1,4)
+c     write(*,*) "q(3) = ",rpole(1,3)
 
 c copy new charge to other reference frame
       do i=1,n
@@ -455,11 +455,11 @@ c copy new charge to other reference frame
       sum2 = 0.d0
 c total charge - should equal charge of system (usually zero)
 c     write(*,*) "number HB and derivatives wrt r"
-      do i=1,n
-        sum1 = sum1 + rpole0(i)
-        sum2 = sum2 + rpole(1,i)
-      enddo
-      write(*,*) "Total system charge : ",sum1,sum2
+c     do i=1,n
+c       sum1 = sum1 + rpole0(i)
+c       sum2 = sum2 + rpole(1,i)
+c     enddo
+c     write(*,*) "Total system charge : ",sum1,sum2
 
       deallocate (nacti)
       deallocate (ndcti)
@@ -513,25 +513,25 @@ c xna ==> % of Qct or % of HB ; dxna is its derivative wrt rr
       real*8 xr0,yr0,zr0
 
 c dedci already calculated, does not change within this routine
-      write(*,*) "ect1 subroutine"
+c     write(*,*) "ect1 subroutine"
 
-      write(*,*) "Pre-CT: dem_x, dem_y, dem_z"
-      do i=1,n
-        write(*,*) dedci(i)
+c     write(*,*) "Pre-CT: dem_x, dem_y, dem_z"
+c     do i=1,n
+c       write(*,*) dedci(i)
 c       dedci(i) = 0.0d0
-        write(*,*) dem(1,i),dem(2,i),dem(3,i) 
-      enddo
+c       write(*,*) dem(1,i),dem(2,i),dem(3,i) 
+c     enddo
 
 c     write(*,*) "CT variables :"
 c     write(*,*) "xna            dxna            zr            rr "
 
 c check virial
-      write(*,*) "Virial pre-CT"
-      do i=1,3
-        do j=1,3
-          write(*,*) vir(i,j)
-        enddo
-      enddo
+c     write(*,*) "Virial pre-CT"
+c     do i=1,3
+c       do j=1,3
+c         write(*,*) vir(i,j)
+c       enddo
+c     enddo
 
 c add forces to dem(i,j=1,2,3) (x,y,z)
 
@@ -554,7 +554,7 @@ c if neighbor is also an oxygen, calculate distance
                   zr = z(j) - z(i)
                   call image (xr,yr,zr)
                   rr = xr*xr + yr*yr + zr*zr
-                  write(*,*) i,j,"rr = ",rr
+c                 write(*,*) i,j,"rr = ",rr
 
                   if(rr.lt.(rct2+1.200)**2) then
 c check if water with oxygen atom j donates hydrogen bond to i
@@ -564,7 +564,7 @@ c check if water with oxygen atom j donates hydrogen bond to i
                         zr = z(j+l) - z(i)
                         call image (xr,yr,zr)
                         rr  = dsqrt(xr**2+yr**2+zr**2)
-                        write(*,*) i,j+l,"r = ",rr
+c                       write(*,*) i,j+l,"r = ",rr
 
                         if(rr.ge.rct1.and.rr.le.rct2) then
                            xna = 
@@ -573,7 +573,7 @@ c check if water with oxygen atom j donates hydrogen bond to i
      & -0.5d0*dsin(pi*(rr-rct1)/(rct2-rct1))
      & *pi/(rct2-rct1)
 
-                           write(*,*) xna,dxna,rr
+c                          write(*,*) xna,dxna,rr
 
 c dE/dq * dq/dr
                            dem(1,i) = dem(1,i)
@@ -631,7 +631,7 @@ c molecule with oxygen atom i donates to hydrogen bond
                         zr = z(i+l) - z(j)
                         call image (xr,yr,zr)
                         rr  = dsqrt(xr**2+yr**2+zr**2)
-                        write(*,*) i+l,j,"r = ",rr
+c                       write(*,*) i+l,j,"r = ",rr
 
                         if(rr.le.rct1) then
 c add to charge transfer energy, no force (energy is constant)
@@ -647,7 +647,7 @@ c add to charge transfer energy, no force (energy is constant)
      & *pi/(rct2-rct1)
 c dxna = N' in Eqn A9 of Lee 2011 JCP
 
-                           write(*,*) xna,dxna,rr
+c                          write(*,*) xna,dxna,rr
 
 c ect here only (not above) to avoid double counting
                            ect=ect+muct*(xna*dqt)
@@ -687,16 +687,16 @@ c    It is but changing l+1 to l in zdqt doesn't change dqdr
      & +(muct+etact*xna*dqt)*dqt
      &)*dxna*zr/rr
 
-                           write(*,*) "dqdr in x analytic = "
-                           write(*,*) zdqt(1,l+1)*dxna*xr/rr,
-     & zdqt(2,l+1)*dxna*xr/rr,
-     & zdqt(3,l+1)*dxna*xr/rr,l+1
+c                          write(*,*) "dqdr in x analytic = "
+c                          write(*,*) zdqt(1,l+1)*dxna*xr/rr,
+c    & zdqt(2,l+1)*dxna*xr/rr,
+c    & zdqt(3,l+1)*dxna*xr/rr,l+1
 c                          write(*,*) "dqdr in y analytic = ",
 c    & (zdqt(1,3)+zdqt(2,3)+zdqt(3,3))*dxna*yr/rr
 c                          write(*,*) "dqdr in z analytic = ",
 c    & (zdqt(1,3)+zdqt(2,3)+zdqt(3,3))*dxna*zr/rr
-                           write(*,*) "dEct/dr in x = ",
-     & ((muct+etact*xna*dqt)*dqt)*dxna*xr/rr
+c                          write(*,*) "dEct/dr in x = ",
+c    & ((muct+etact*xna*dqt)*dqt)*dxna*xr/rr
 c                          write(*,*) "dEct/dr in y = ",
 c    & ((muct+etact*xna*dqt)*dqt)*dxna*yr/rr
 c                          write(*,*) "dEct/dr in z = ",
@@ -754,20 +754,20 @@ c        end if O_w
 c     end of loop over all O_w
   
 c check virial
-      write(*,*) "Virial post-CT"
-      do i=1,3
-        do j=1,3
-          write(*,*) vir(i,j)
-        enddo
-      enddo
+c     write(*,*) "Virial post-CT"
+c     do i=1,3
+c       do j=1,3
+c         write(*,*) vir(i,j)
+c       enddo
+c     enddo
 
       em = em + ect
-      write(*,*) "Ect = ",ect,"    total em = ",em
+c     write(*,*) "Ect = ",ect,"    total em = ",em
 
-      write(*,*) "Post-CT: dem_x, dem_y, dem_z"
-      do i=1,n
-        write(*,*) dem(1,i),dem(2,i),dem(3,i)
-      enddo
+c     write(*,*) "Post-CT: dem_x, dem_y, dem_z"
+c     do i=1,n
+c       write(*,*) dem(1,i),dem(2,i),dem(3,i)
+c     enddo
 
       return
       end
@@ -1035,7 +1035,7 @@ c if neighbor is also an oxygen, calculate distance
                   zr = z(j) - z(i)
                   call image (xr,yr,zr)
                   rr = xr*xr + yr*yr + zr*zr
-                  write(*,*) "r(O-O) = ",dsqrt(rr)
+c                 write(*,*) "r(O-O) = ",dsqrt(rr)
 
                   if(rr.lt.(rct2+1.200)**2) then
 c check if water with oxygen atom j donates hydrogen bond to i
@@ -1049,7 +1049,7 @@ c check if water with oxygen atom j donates hydrogen bond to i
                         if(rr.ge.rct1.and.rr.le.rct2) then
                            xna = 
      & 0.5d0*(1.d0+dcos(pi*(rr-rct1)/(rct2-rct1)))
-                           write(*,*) i,j+l,rr,xna
+c                          write(*,*) i,j+l,rr,xna
 
                         endif
 c                       end if between rct1 and rct2
@@ -1070,7 +1070,7 @@ c add to charge transfer energy, no force (energy is constant)
 
                            xna = 
      & 0.5d0*(1.d0+dcos(pi*(rr-rct1)/(rct2-rct1)))
-                           write(*,*) i,j+l,rr,xna
+c                          write(*,*) i,j+l,rr,xna
 
 c ect here only (not above) to avoid double counting
                            ect=ect+muct*(xna*dqt)
@@ -1092,7 +1092,7 @@ c        end if O_w
       enddo
 c     end of loop over all O_w
   
-      write(*,*) "Ect = ",ect
+c     write(*,*) "Ect = ",ect
       em = em + ect
 
 

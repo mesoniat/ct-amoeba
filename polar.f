@@ -32,5 +32,10 @@ c
       real*8, allocatable :: uinp(:,:)
       real*8, allocatable :: uinds(:,:)
       real*8, allocatable :: uinps(:,:)
+c DCT
+      real*8, allocatable :: duinddci(:,:,:)
+      real*8, allocatable :: duinpdci(:,:,:)
+      real*8, allocatable :: dfuinddci(:,:,:)
+      real*8, allocatable :: dfuinpdci(:,:,:)
       save
       end

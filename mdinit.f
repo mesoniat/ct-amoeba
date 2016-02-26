@@ -67,12 +67,6 @@ c
 c
 c     set default parameters for the dynamics trajectory
 c
-      write(*,*) "start of mdinit"
-      x(4) = x(4) - 0.0000d0
-      do i = 1,n
-        write(*,*) x(i),y(i),z(i)
-      enddo
-
       integrate = 'BEEMAN'
       bmnmix = 8
       nfree = 0
@@ -395,7 +389,7 @@ c
       call version (dynfile,'old')
       inquire (file=dynfile,exist=exist)
       if (exist) then
-         write(*,*) "restart??"
+         write(*,*) "RESTART"
          idyn = freeunit ()
          open (unit=idyn,file=dynfile,status='old')
          rewind (unit=idyn)
