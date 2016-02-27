@@ -553,6 +553,7 @@ c
       if (allocated(qgrid))  deallocate (qgrid)
 c DCT
       if (allocated(dqgrdci))  deallocate (dqgrdci)
+      if (allocated(dqgrdciX))  deallocate (dqgrdciX)
       if (allocated(dqgrdci2))  deallocate (dqgrdci2)
       if (allocated(dedci)) deallocate (dedci)
       if (allocated(depdci)) deallocate (depdci)

@@ -216,8 +216,16 @@ c
 c DCT 
       real*8, allocatable :: dfielddci(:,:,:)
       real*8, allocatable :: dfieldpdci(:,:,:)
+      real*8, allocatable :: dudir(:,:,:)
+      real*8, allocatable :: dudirp(:,:,:)
+      real*8, allocatable :: drsd(:,:,:)
+      real*8, allocatable :: drsdp(:,:,:)
+      real*8, allocatable :: dzrsd(:,:,:)
+      real*8, allocatable :: dzrsdp(:,:,:)
       real*8, allocatable :: dconj(:,:,:)
       real*8, allocatable :: dconjp(:,:,:)
+      real*8, allocatable :: dvec(:,:,:)
+      real*8, allocatable :: dvecp(:,:,:)
       real*8, allocatable :: test(:,:,:)
       logical done
       character*6 mode
@@ -248,6 +256,8 @@ c DCT
       allocate (test(3,npole,npole))
       allocate (dfielddci(3,npole,npole))
       allocate (dfieldpdci(3,npole,npole))
+      allocate (dudir(3,npole,npole))
+      allocate (dudirp(3,npole,npole))
 c
 c     get the electrostatic field due to permanent multipoles
 c
@@ -274,6 +284,8 @@ c
             do k = 1, npole
               duinddci(j,i,k) = polarity(i) * dfielddci(j,i,k)
               duinpdci(j,i,k) = polarity(i) * dfieldpdci(j,i,k)
+              dudir(j,i,k)  = polarity(i) * dfielddci(j,i,k)
+              dudirp(j,i,k) = polarity(i) * dfieldpdci(j,i,k)
             end do
          end do
       end do
@@ -322,8 +334,14 @@ c
          allocate (vec(3,npole))
          allocate (vecp(3,npole))
 c DCT
+         allocate (drsd(3,npole,npole))
+         allocate (drsdp(3,npole,npole))
+         allocate (dzrsd(3,npole,npole))
+         allocate (dzrsdp(3,npole,npole))
          allocate (dconj(3,npole,npole))
          allocate (dconjp(3,npole,npole))
+         allocate (dvec(3,npole,npole))
+         allocate (dvecp(3,npole,npole))
 c
 c     get the electrostatic field due to induced dipoles
 c
@@ -337,6 +355,10 @@ c           call ufield0c (field,fieldp)
             call ufield0a (field,fieldp)
          end if
 c MES duinddci good here
+      write(*,*) "field"
+      write(*,*) "effect on 3 by 4",field(1,3),dfielddci(1,3,4)
+      write(*,*) "effect on 4 by 4",field(1,4),dfielddci(1,4,4)
+c     write(*,*) "uind"
 c     write(*,*) "effect on 3 by 4",uind(1,3),duinddci(1,3,4)
 c     write(*,*) "effect on 4 by 4",uind(1,4),duinddci(1,4,4)
 c
@@ -350,8 +372,15 @@ c
      &                       + field(j,i)
                rsdp(j,i) = (udirp(j,i)-uinp(j,i))/poli(i)
      &                       + fieldp(j,i)
+               do k = 1, npole 
+                  drsd(j,i,k) = (dudir(j,i,k)-duinddci(j,i,k))/poli(i)
+     &                       + dfielddci(j,i,k)
+                  drsdp(j,i,k) = (dudirp(j,i,k)-duinpdci(j,i,k))/poli(i)
+     &                       + dfieldpdci(j,i,k)
+               end do
             end do
          end do
+         write(*,*) "effect on 3 by 4",rsd(1,3),drsd(1,3,4)
          mode = 'BUILD'
          if (use_mlist) then
             call uscale0b (mode,rsd,rsdp,zrsd,zrsdp)
@@ -372,6 +401,8 @@ c     write(*,*) "effect on 3 by 4",uind(1,3),duinddci(1,3,4)
 c     write(*,*) "effect on 4 by 4",uind(1,4),duinddci(1,4,4)
 c     write(*,*) "effect on 3 by 4",conj(1,3),dconj(1,3,4)
 c     write(*,*) "effect on 4 by 4",conj(1,4),dconj(1,4,4)
+  
+
 c
 c     conjugate gradient iteration of the mutual induced dipoles
 c
@@ -490,8 +521,14 @@ c
          deallocate (conjp)
          deallocate (vec)
          deallocate (vecp)
+         deallocate (drsd)
+         deallocate (drsdp)
+         deallocate (dzrsd)
+         deallocate (dzrsdp)
          deallocate (dconj)
          deallocate (dconjp)
+         deallocate (dvec)
+         deallocate (dvecp)
 c
 c     print the results from the conjugate gradient iteration
 c
@@ -521,6 +558,8 @@ c
       deallocate (dfieldpdci)
       deallocate (udir)
       deallocate (udirp)
+      deallocate (dudir)
+      deallocate (dudirp)
 
       write(*,*) "effect on 3 by 4",uind(1,3),duinddci(1,3,4)
       write(*,*) "effect on 4 by 4",uind(1,4),duinddci(1,4,4)
@@ -1637,6 +1676,9 @@ c     get the reciprocal space part of the electrostatic field
 c
 c     call umutual1 (field,fieldp)
       call umutual1 (field,fieldp,dfielddci,dfieldpdci)
+      write(*,*) "field"
+      write(*,*) "effect on 3 by 4",field(1,3),dfielddci(1,3,4)
+      write(*,*) "effect on 4 by 4",field(1,4),dfielddci(1,4,4)
 c
 c     get the real space portion of the electrostatic field
 c
@@ -1646,6 +1688,9 @@ c        call umutual2b (field,fieldp)
       else
          call umutual2a (field,fieldp)
       end if
+      write(*,*) "field"
+      write(*,*) "effect on 3 by 4",field(1,3),dfielddci(1,3,4)
+      write(*,*) "effect on 4 by 4",field(1,4),dfielddci(1,4,4)
 c
 c     get the self-energy portion of the electrostatic field
 c
@@ -2971,7 +3016,7 @@ c     subroutine umutual1 (field,fieldp)
       use pme
       use polar
       implicit none
-      integer i,j,k,isite
+      integer i,j,k,isite,jsite
       real*8 term
       real*8 a(3,3)
       real*8 field(3,*)
@@ -2985,7 +3030,13 @@ c     subroutine umutual1 (field,fieldp)
       real*8, allocatable :: fdip_sum_phi(:,:)
       real*8, allocatable :: dipfield1(:,:)
       real*8, allocatable :: dipfield2(:,:)
+c DCT
       real*8, allocatable :: tmpqgrid(:,:,:,:)
+      real*8, allocatable :: dfdip_phi1(:,:,:)
+      real*8, allocatable :: dfdip_phi2(:,:,:)
+      real*8, allocatable :: dfdip_sum_phi(:,:,:)
+      real*8, allocatable :: ddipfield1dci(:,:,:)
+      real*8, allocatable :: ddipfield2dci(:,:,:)
 c
       write(*,*) "Entering umutual1"
 c
@@ -3002,7 +3053,13 @@ c
       allocate (fdip_sum_phi(20,npole))
       allocate (dipfield1(3,npole))
       allocate (dipfield2(3,npole))
+c DCT
       allocate (tmpqgrid(2,nfft1,nfft2,nfft3))
+      allocate (dfdip_phi1(10,npole,npole))
+      allocate (dfdip_phi2(10,npole,npole))
+      allocate (dfdip_sum_phi(20,npole,npole))
+      allocate (ddipfield1dci(3,npole,npole))
+      allocate (ddipfield2dci(3,npole,npole))
 c
 c     convert Cartesian dipoles to fractional coordinates
 c
@@ -3031,6 +3088,7 @@ c     assign PME grid and perform 3-D FFT forward transform
 c
 c     call grid_uind (fuind,fuinp)
       call grid_uind (fuind,fuinp,dfuinddci,dfuinpdci)
+c MES dqgrdciX are good here
 c first call is for qgrid
          call fftfront
 c make temp var for qgrid
@@ -3043,6 +3101,35 @@ c make temp var for qgrid
             end do
          end do
 c for each atom
+         do isite = 1,npole
+         do jsite = 1,npole
+c copy dqgrdci of that atom to qgrid 
+           do k = 1, nfft3
+              do j = 1, nfft2
+                 do i = 1, nfft1
+c                     qgrid(1,i,j,k) = dqgrdci(1,i,j,k,isite)
+c                     qgrid(2,i,j,k) = dqgrdci(2,i,j,k,isite)
+                      qgrid(1,i,j,k) = dqgrdciX(1,i,j,k,isite,jsite)
+                      qgrid(2,i,j,k) = dqgrdciX(2,i,j,k,isite,jsite)
+                 end do
+              end do
+           end do
+c FT on qgrid
+           call fftfront
+c move FT'ed qgrid back to dqgrdci
+           do k = 1, nfft3
+              do j = 1, nfft2
+                 do i = 1, nfft1
+c                  dqgrdci(1,i,j,k,isite) = qgrid(1,i,j,k)
+c                  dqgrdci(2,i,j,k,isite) = qgrid(2,i,j,k)
+                   dqgrdciX(1,i,j,k,isite,jsite) = qgrid(1,i,j,k)
+                   dqgrdciX(2,i,j,k,isite,jsite) = qgrid(2,i,j,k)
+                 end do
+              end do
+           end do
+         end do
+         end do
+c repeat for charge at qgrid due to isite
          do isite = 1,npole
 c copy dqgrdci of that atom to qgrid 
            do k = 1, nfft3
@@ -3075,6 +3162,7 @@ c restore qgrid
             end do
          end do
 c back to normal part of calculations
+c     write(*,*) dqgrdci(1,10,8,7,3),dqgrdciX(1,10,8,7,3,4)
 
 c
 c     complete the transformation of the PME grid
@@ -3088,10 +3176,17 @@ c
                do isite = 1, npole
                  dqgrdci(1,i,j,k,isite) = term * dqgrdci(1,i,j,k,isite)
                  dqgrdci(2,i,j,k,isite) = term * dqgrdci(2,i,j,k,isite)
+                 do jsite = 1, npole
+                   dqgrdciX(1,i,j,k,isite,jsite) = 
+     & term * dqgrdciX(1,i,j,k,isite,jsite)
+                   dqgrdciX(2,i,j,k,isite,jsite) = 
+     & term * dqgrdciX(2,i,j,k,isite,jsite)
+                 end do
                end do
             end do
          end do
       end do
+c     write(*,*) dqgrdci(1,10,8,7,3),dqgrdciX(1,10,8,7,3,4)
 
 c
 c     perform 3-D FFT backward transform and get field
@@ -3106,6 +3201,35 @@ c make temp var for qgrid
                   tmpqgrid(2,i,j,k) = qgrid(2,i,j,k)
               end do
             end do
+         end do
+c for each atom
+         do isite = 1,npole
+         do jsite = 1,npole
+c copy dqgrdci of that atom to qgrid 
+           do k = 1, nfft3
+              do j = 1, nfft2
+                 do i = 1, nfft1
+c                     qgrid(1,i,j,k) = dqgrdci(1,i,j,k,isite)
+c                     qgrid(2,i,j,k) = dqgrdci(2,i,j,k,isite)
+                      qgrid(1,i,j,k) = dqgrdciX(1,i,j,k,isite,jsite)
+                      qgrid(2,i,j,k) = dqgrdciX(2,i,j,k,isite,jsite)
+                 end do
+              end do
+           end do
+c FT on qgrid
+           call fftback
+c move FT'ed qgrid back to dqgrdci
+           do k = 1, nfft3
+              do j = 1, nfft2
+                 do i = 1, nfft1
+c                  dqgrdci(1,i,j,k,isite) = qgrid(1,i,j,k)
+c                  dqgrdci(2,i,j,k,isite) = qgrid(2,i,j,k)
+                   dqgrdciX(1,i,j,k,isite,jsite) = qgrid(1,i,j,k)
+                   dqgrdciX(2,i,j,k,isite,jsite) = qgrid(2,i,j,k)
+                 end do
+              end do
+           end do
+         end do
          end do
 c for each atom
          do isite = 1,npole
@@ -3140,7 +3264,17 @@ c restore qgrid
             end do
          end do
 c back to normal part of calculations
-      call fphi_uind (fdip_phi1,fdip_phi2,fdip_sum_phi)
+c     write(*,*) dqgrdci(1,10,8,7,3),dqgrdciX(1,10,8,7,3,4)
+
+c     call fphi_uind (fdip_phi1,fdip_phi2,fdip_sum_phi)
+      call fphi_uindCT (fdip_phi1,fdip_phi2,fdip_sum_phi,
+     & dfdip_phi1,dfdip_phi2,dfdip_sum_phi)
+      write(*,*) "fdip_phi1"
+      write(*,*) fdip_phi1(2,3),dfdip_phi1(2,3,4)
+      write(*,*) "fdip_phi2"
+      write(*,*) fdip_phi2(2,3),dfdip_phi2(2,3,4)
+      write(*,*) "fdip_sum_phi"
+      write(*,*) fdip_sum_phi(2,3),dfdip_sum_phi(2,3,4)
 c
 c     convert the dipole fields from fractional to Cartesian
 c
@@ -3190,7 +3324,13 @@ c
       deallocate (fdip_sum_phi)
       deallocate (dipfield1)
       deallocate (dipfield2)
+
       deallocate (tmpqgrid)
+      deallocate (dfdip_phi1)
+      deallocate (dfdip_phi2)
+      deallocate (dfdip_sum_phi)
+      deallocate (ddipfield1dci)
+      deallocate (ddipfield2dci)
 
       write(*,*) "Done with umutual1"
       return

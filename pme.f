@@ -46,6 +46,7 @@ c
 c MES
       real*8, allocatable :: dqgrdci2(:,:,:,:)
       real*8, allocatable :: dqgrdci(:,:,:,:,:)
+      real*8, allocatable :: dqgrdciX(:,:,:,:,:,:)
       real*8, allocatable :: qfac(:,:,:)
       save
       end

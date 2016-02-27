@@ -165,6 +165,7 @@ c
       if (allocated(thetai3))  deallocate (thetai3)
       if (allocated(qgrid))  deallocate (qgrid)
       if (allocated(dqgrdci))  deallocate (dqgrdci)
+      if (allocated(dqgrdciX))  deallocate (dqgrdciX)
       if (allocated(dqgrdci2))  deallocate (dqgrdci2)
       if (allocated(qfac))  deallocate (qfac)
       if (allocated(pmetable))  deallocate (pmetable)
@@ -178,6 +179,7 @@ c
       allocate (qgrid(2,nfft1,nfft2,nfft3))
       allocate (dqgrdci2(2,nfft1,nfft2,nfft3))
       allocate (dqgrdci(2,nfft1,nfft2,nfft3,n))
+      allocate (dqgrdciX(2,nfft1,nfft2,nfft3,n,n))
       allocate (qfac(nfft1,nfft2,nfft3))
       allocate (pmetable(n,nchunk))
 c
