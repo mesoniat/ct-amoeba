@@ -30,11 +30,12 @@ c
       use rigid
       use vdwpot
       use virial
+c     use mpole
       implicit none
-      integer i,j
+      integer i,j,kk
       real*8 energy,cutoff
       real*8 derivs(3,*)
-      real*8 dr
+      real*8 dr,delta,q0
 c
 c     zero out each of the potential energy components
 c
@@ -230,6 +231,13 @@ c
 c DCT gets new charges from current geometry
       if (use_crgtr) call newcrg
 
+c FD test
+c     q0 = rpole(1,4)
+c     delta = 0.0001
+c     do kk = -1, 1
+c       rpole(1,4) = q0 + real(kk)*delta
+c       write(*,*) "Loop ",kk," q(4) = ",rpole(1,4)
+
       if (use_charge)  call echarge1
       if (use_chgdpl)  call echgdpl1
       if (use_dipole)  call edipole1
@@ -270,6 +278,10 @@ c
             derivs(j,i) = desum(j,i)
          end do
       end do
+
+c     end do
+c     end of FD test
+
 c
 c     check for an illegal value for the total energy
 c
@@ -283,7 +295,7 @@ c     if (isnan(esum)) then
 
 c     call gtest(derivs)
 c     call qtest(derivs)
-      call ptest
+c     call ptest
 
       return
       end
@@ -922,7 +934,7 @@ c
 
       k = 4
       dir = 1
-      delta = 0.00001
+      delta = 0.0001
       write(*,*) "Entering qtest for atom ",k," for dir ",dir
 
 c     get initial values
@@ -937,12 +949,14 @@ c     derivs(j,i) = derivatives, dir=direction, k=atom
       ldepdci = depdci(k)
       q0 = rpole(1,k)
 
+      write(*,*) "Positive delta"
       rpole(1,k) = q0 + delta
       call empole1
       epP = ep
       emP = em
       etP = esum
       
+      write(*,*) "Negative delta"
       rpole(1,k) = q0 - delta
       call empole1
       epN = ep

@@ -2113,7 +2113,8 @@ c     the particle mesh Ewald grid
 c
 c
       subroutine fphi_uindCT (fdip_phi1,fdip_phi2,fdip_sum_phi,
-     & dfdip_phi1,dfdip_phi2,dfdip_sum_phi)
+     & dfdip_phi1,dfdip_phi2,dfdip_sum_phi,fdip_phi1a,fdip_phi2a,
+     & fdip_sum_phia)
       use sizes
       use mpole
       use pme
@@ -2171,6 +2172,9 @@ c
       real*8 fdip_phi2(10,*)
       real*8 fdip_sum_phi(20,*)
 
+      real*8 fdip_phi1a(10,*)
+      real*8 fdip_phi2a(10,*)
+      real*8 fdip_sum_phia(20,*)
       real*8 dfdip_phi1(10,npole,npole)
       real*8 dfdip_phi2(10,npole,npole)
       real*8 dfdip_sum_phi(20,npole,npole)
@@ -2921,9 +2925,9 @@ c           end of jsite
          end do
 c        end of it3
 
-         if (isite.eq.3) then
-            write(*,*) isite,tuv100a,dtuv100(4)
-         end if
+c        if (isite.eq.3) then
+c           write(*,*) isite,tuv100a,dtuv100(4)
+c        end if
 
          fdip_phi1(2,isite) = tuv100_1
          fdip_phi1(3,isite) = tuv010_1
@@ -2965,6 +2969,47 @@ c        end of it3
          fdip_sum_phi(18,isite) = tuv102
          fdip_sum_phi(19,isite) = tuv012
          fdip_sum_phi(20,isite) = tuv111
+
+         fdip_phi1a(2,isite) = tuv100_1a
+         fdip_phi1a(3,isite) = tuv010_1a
+         fdip_phi1a(4,isite) = tuv001_1a
+         fdip_phi1a(5,isite) = tuv200_1a
+         fdip_phi1a(6,isite) = tuv020_1a
+         fdip_phi1a(7,isite) = tuv002_1a
+         fdip_phi1a(8,isite) = tuv110_1a
+         fdip_phi1a(9,isite) = tuv101_1a
+         fdip_phi1a(10,isite) = tuv011_1a
+
+         fdip_phi2a(2,isite) = tuv100_2a
+         fdip_phi2a(3,isite) = tuv010_2a
+         fdip_phi2a(4,isite) = tuv001_2a
+         fdip_phi2a(5,isite) = tuv200_2a
+         fdip_phi2a(6,isite) = tuv020_2a
+         fdip_phi2a(7,isite) = tuv002_2a
+         fdip_phi2a(8,isite) = tuv110_2a
+         fdip_phi2a(9,isite) = tuv101_2a
+         fdip_phi2a(10,isite) = tuv011_2a
+
+         fdip_sum_phia(1,isite) = tuv000a
+         fdip_sum_phia(2,isite) = tuv100a
+         fdip_sum_phia(3,isite) = tuv010a
+         fdip_sum_phia(4,isite) = tuv001a
+         fdip_sum_phia(5,isite) = tuv200a
+         fdip_sum_phia(6,isite) = tuv020a
+         fdip_sum_phia(7,isite) = tuv002a
+         fdip_sum_phia(8,isite) = tuv110a
+         fdip_sum_phia(9,isite) = tuv101a
+         fdip_sum_phia(10,isite) = tuv011a
+         fdip_sum_phia(11,isite) = tuv300a
+         fdip_sum_phia(12,isite) = tuv030a
+         fdip_sum_phia(13,isite) = tuv003a
+         fdip_sum_phia(14,isite) = tuv210a
+         fdip_sum_phia(15,isite) = tuv201a
+         fdip_sum_phia(16,isite) = tuv120a
+         fdip_sum_phia(17,isite) = tuv021a
+         fdip_sum_phia(18,isite) = tuv102a
+         fdip_sum_phia(19,isite) = tuv012a
+         fdip_sum_phia(20,isite) = tuv111a
 
          do jsite = 1, npole
             dfdip_phi1(2,isite,jsite) = dtuv100_1(jsite)

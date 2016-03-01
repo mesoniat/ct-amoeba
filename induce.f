@@ -161,7 +161,7 @@ c
 
 c MES for debugging
 c     uind(2,3) = uind(2,3) + 0.00000001d0
-      write(*,*) "uind(1,4) = ",uind(1,4),debye*uind(1,4)
+c     write(*,*) "uind(1,4) = ",uind(1,4),debye*uind(1,4)
 
       return
       end
@@ -214,6 +214,8 @@ c
       real*8, allocatable :: vec(:,:)
       real*8, allocatable :: vecp(:,:)
 c DCT 
+      real*8 da,dap,db,dbp
+      real*8 dsum,dsump
       real*8, allocatable :: dfielddci(:,:,:)
       real*8, allocatable :: dfieldpdci(:,:,:)
       real*8, allocatable :: dudir(:,:,:)
@@ -227,6 +229,17 @@ c DCT
       real*8, allocatable :: dvec(:,:,:)
       real*8, allocatable :: dvecp(:,:,:)
       real*8, allocatable :: test(:,:,:)
+      real*8, allocatable :: fieldA(:,:)
+      real*8, allocatable :: fieldpA(:,:)
+      real*8, allocatable :: rsdA(:,:)
+      real*8, allocatable :: rsdpA(:,:)
+      real*8, allocatable :: zrsdA(:,:)
+      real*8, allocatable :: zrsdpA(:,:)
+      real*8, allocatable :: conjA(:,:)
+      real*8, allocatable :: conjpA(:,:)
+      real*8, allocatable :: vecA(:,:)
+      real*8, allocatable :: vecpA(:,:)
+
       logical done
       character*6 mode
 c
@@ -258,6 +271,8 @@ c DCT
       allocate (dfieldpdci(3,npole,npole))
       allocate (dudir(3,npole,npole))
       allocate (dudirp(3,npole,npole))
+      allocate (fieldA(3,npole))
+      allocate (fieldpA(3,npole))
 c
 c     get the electrostatic field due to permanent multipoles
 c
@@ -289,6 +304,8 @@ c
             end do
          end do
       end do
+c     write(*,*) "udir ",udir(1,3),dudir(1,3,4)
+c     write(*,*) "uind ",uind(1,3),duinddci(1,3,4)
 c MES duinddci good here
 c     write(*,*) "effect on 3 by 4",uind(1,3),duinddci(1,3,4)
 c     write(*,*) "effect on 4 by 4",uind(1,4),duinddci(1,4,4)
@@ -342,22 +359,32 @@ c DCT
          allocate (dconjp(3,npole,npole))
          allocate (dvec(3,npole,npole))
          allocate (dvecp(3,npole,npole))
+         allocate (rsdA(3,npole))
+         allocate (rsdpA(3,npole))
+         allocate (zrsdA(3,npole))
+         allocate (zrsdpA(3,npole))
+         allocate (conjA(3,npole))
+         allocate (conjpA(3,npole))
+         allocate (vecA(3,npole))
+         allocate (vecpA(3,npole))
 c
 c     get the electrostatic field due to induced dipoles
 c
          if (use_ewald) then
 c MES using ufield0c
-            call ufield0c (field,fieldp,dfielddci,dfieldpdci)
+            call ufield0c (field,fieldp,dfielddci,dfieldpdci,
+     & fieldA,fieldpA)
+c           call ufield0c (field,fieldp,dfielddci,dfieldpdci)
 c           call ufield0c (field,fieldp)
          else if (use_mlist) then
             call ufield0b (field,fieldp)
          else
             call ufield0a (field,fieldp)
          end if
-c MES duinddci good here
-      write(*,*) "field"
-      write(*,*) "effect on 3 by 4",field(1,3),dfielddci(1,3,4)
-      write(*,*) "effect on 4 by 4",field(1,4),dfielddci(1,4,4)
+c MES duinddci and dfield(A)dci good here
+c     write(*,*) "field"
+c     write(*,*) "effect on 3 by 4",field(1,3),dfielddci(1,3,4)
+c     write(*,*) "effect on 4 by 4",field(1,4),dfielddci(1,4,4)
 c     write(*,*) "uind"
 c     write(*,*) "effect on 3 by 4",uind(1,3),duinddci(1,3,4)
 c     write(*,*) "effect on 4 by 4",uind(1,4),duinddci(1,4,4)
@@ -365,6 +392,10 @@ c
 c     set initial conjugate gradient residual and conjugate vector
 c MES : not sure if I need derivatives in the conj grad part
 c
+         write(*,*) "Before conj grad :"
+         write(*,*) "mu(1,1)    ",udir(1,1),uind(1,1),fieldA(1,1)
+         write(*,*) "dmu(1,1,4) ",dudir(1,1,4),duinddci(1,1,4),
+     & dfielddci(1,1,4)
          do i = 1, npole
             poli(i) = max(polmin,polarity(i))
             do j = 1, 3
@@ -372,6 +403,11 @@ c
      &                       + field(j,i)
                rsdp(j,i) = (udirp(j,i)-uinp(j,i))/poli(i)
      &                       + fieldp(j,i)
+
+               rsdA(j,i) = (udir(j,i)-uind(j,i))/poli(i)
+     &                       + fieldA(j,i)
+               rsdpA(j,i) = (udirp(j,i)-uinp(j,i))/poli(i)
+     &                       + fieldpA(j,i)
                do k = 1, npole 
                   drsd(j,i,k) = (dudir(j,i,k)-duinddci(j,i,k))/poli(i)
      &                       + dfielddci(j,i,k)
@@ -380,21 +416,33 @@ c
                end do
             end do
          end do
-         write(*,*) "effect on 3 by 4",rsd(1,3),drsd(1,3,4)
+c        write(*,*) "rsd ",rsd(1,1),rsdA(1,1),drsd(1,1,4)
          mode = 'BUILD'
          if (use_mlist) then
-            call uscale0b (mode,rsd,rsdp,zrsd,zrsdp)
+c           call uscale0b (mode,rsd,rsdp,zrsd,zrsdp)
+            call uscale0b (mode,rsd,rsdp,zrsd,zrsdp,rsdA,rsdpA,
+     & zrsdA,zrsdpA,drsd,drsdp,dzrsd,dzrsdp)
             mode = 'APPLY'
-            call uscale0b (mode,rsd,rsdp,zrsd,zrsdp)
+c           call uscale0b (mode,rsd,rsdp,zrsd,zrsdp)
+            call uscale0b (mode,rsd,rsdp,zrsd,zrsdp,rsdA,rsdpA,
+     & zrsdA,zrsdpA,drsd,drsdp,dzrsd,dzrsdp)
          else
             call uscale0a (mode,rsd,rsdp,zrsd,zrsdp)
             mode = 'APPLY'
             call uscale0a (mode,rsd,rsdp,zrsd,zrsdp)
          end if
+c        write(*,*) "zrsd ",zrsd(1,3),zrsdA(1,3),dzrsd(1,3,4)
          do i = 1, npole
             do j = 1, 3
                conj(j,i) = zrsd(j,i)
                conjp(j,i) = zrsdp(j,i)
+
+               conjA(j,i) = zrsdA(j,i)
+               conjpA(j,i) = zrsdpA(j,i)
+               do k = 1, npole
+                  dconj(j,i,k) = dzrsd(j,i,k)
+                  dconjp(j,i,k) = dzrsdp(j,i,k)
+               end do
             end do
          end do
 c     write(*,*) "effect on 3 by 4",uind(1,3),duinddci(1,3,4)
@@ -417,12 +465,28 @@ c store old uind as vec; move current conj to uind
                   vecp(j,i) = uinp(j,i)
                   uind(j,i) = conj(j,i)
                   uinp(j,i) = conjp(j,i)
+
+c                 vec(j,i) = uind(j,i)
+c                 vecp(j,i) = uinp(j,i)
+c                 uind(j,i) = conj(j,i)
+c                 uinp(j,i) = conjp(j,i)
+                  do k = 1, npole
+                     dvec(j,i,k) = duinddci(j,i,k)
+                     dvecp(j,i,k) = duinpdci(j,i,k)
+                     duinddci(j,i,k) = dconj(j,i,k)
+                     duinpdci(j,i,k) = dconjp(j,i,k)
+                  end do
                end do
             end do
+c so now the uind are actually residuals
+            write(*,*) "old ",vec(1,3),dvec(1,3,4)
+            write(*,*) "new ",uind(1,3),duinddci(1,3,4)
             if (use_ewald) then
 c recalculate field from new uind
 c              call ufield0c (field,fieldp)
-               call ufield0c (field,fieldp,dfielddci,dfieldpdci)
+c              call ufield0c (field,fieldp,dfielddci,dfieldpdci)
+               call ufield0c (field,fieldp,dfielddci,dfieldpdci,
+     & fieldA,fieldpA)
             else if (use_mlist) then
                call ufield0b (field,fieldp)
             else
@@ -435,12 +499,27 @@ c move vec back to uind; calc new vec based on new field
                   uinp(j,i) = vecp(j,i)
                   vec(j,i) = conj(j,i)/poli(i) - field(j,i)
                   vecp(j,i) = conjp(j,i)/poli(i) - fieldp(j,i)
+
+                  do k = 1, npole
+                     duinddci(j,i,k) = dvec(j,i,k)
+                     duinpdci(j,i,k) = dvecp(j,i,k)
+                     dvec(j,i,k) = dconj(j,i,k)/poli(i) 
+     & - dfielddci(j,i,k)
+                     dvecp(j,i,k) = dconjp(j,i,k)/poli(i) 
+     & - dfieldpdci(j,i,k)
+                  end do
                end do
             end do
+
             a = 0.0d0
             ap = 0.0d0
             sum = 0.0d0
             sump = 0.0d0
+            da = 0.0d0
+            dap = 0.0d0
+            dsum = 0.0d0
+            dsump = 0.0d0
+
             do i = 1, npole
                do j = 1, 3
 c variable a determines how much to change uind for next cycle
@@ -448,10 +527,20 @@ c variable a determines how much to change uind for next cycle
                   ap = ap + conjp(j,i)*vecp(j,i)
                   sum = sum + rsd(j,i)*zrsd(j,i)
                   sump = sump + rsdp(j,i)*zrsdp(j,i)
+
+                  do k = 1, npole
+                     da = da + dconj(j,i,k)*dvec(j,i,k)
+                     dap = dap + dconjp(j,i,k)*dvecp(j,i,k)
+                     dsum = dsum + drsd(j,i,k)*dzrsd(j,i,k)
+                     dsump = dsump + drsdp(j,i,k)*dzrsdp(j,i,k)
+                  end do
                end do
             end do
             if (a .ne. 0.0d0)  a = sum / a
             if (ap .ne. 0.0d0)  ap = sump / ap
+            if (da .ne. 0.0d0)  da = dsum / da
+            if (dap .ne. 0.0d0)  dap = dsump / dap
+
             do i = 1, npole
                do j = 1, 3
 c new trial uind; rsd used in tolerance calc.
@@ -459,25 +548,45 @@ c new trial uind; rsd used in tolerance calc.
                   uinp(j,i) = uinp(j,i) + ap*conjp(j,i)
                   rsd(j,i) = rsd(j,i) - a*vec(j,i)
                   rsdp(j,i) = rsdp(j,i) - ap*vecp(j,i)
+
+                  do k = 1, npole
+                     duinddci(j,i,k) = duinddci(j,i,k) + da*dconj(j,i,k)
+                     duinpdci(j,i,k) = duinpdci(j,i,k) 
+     & + dap*dconjp(j,i,k)
+                     drsd(j,i,k) = drsd(j,i,k) - da*dvec(j,i,k)
+                     drsdp(j,i,k) = drsdp(j,i,k) - dap*dvecp(j,i,k)
+                  end do
                end do
             end do
             if (use_mlist) then
 c calc zrsd
-               call uscale0b (mode,rsd,rsdp,zrsd,zrsdp)
+c              call uscale0b (mode,rsd,rsdp,zrsd,zrsdp)
+               call uscale0b (mode,rsd,rsdp,zrsd,zrsdp,rsdA,rsdpA,
+     & zrsdA,zrsdpA,drsd,drsdp,dzrsd,dzrsdp)
             else
                call uscale0a (mode,rsd,rsdp,zrsd,zrsdp)
             end if
             b = 0.0d0
             bp = 0.0d0
+            db = 0.0d0
+            dbp = 0.0d0
             do i = 1, npole
                do j = 1, 3
 c variable b determines how much to change conj for next cycle
                   b = b + rsd(j,i)*zrsd(j,i)
                   bp = bp + rsdp(j,i)*zrsdp(j,i)
+
+                  do k = 1, npole
+                     db = db + drsd(j,i,k)*dzrsd(j,i,k)
+                     dbp = dbp + drsdp(j,i,k)*dzrsdp(j,i,k)
+                  end do
                end do
             end do
             if (sum .ne. 0.0d0)  b = b / sum
             if (sump .ne. 0.0d0)  bp = bp / sump
+            if (dsum .ne. 0.0d0)  db = db / dsum
+            if (dsump .ne. 0.0d0)  dbp = dbp / dsump
+
             epsd = 0.0d0
             epsp = 0.0d0
             do i = 1, npole
@@ -487,6 +596,11 @@ c new trial conj
                   conjp(j,i) = zrsdp(j,i) + bp*conjp(j,i)
                   epsd = epsd + rsd(j,i)*rsd(j,i)
                   epsp = epsp + rsdp(j,i)*rsdp(j,i)
+
+                  do k = 1, npole
+                     dconj(j,i,k) = dzrsd(j,i,k) + db*dconj(j,i,k)
+                     dconjp(j,i,k) = dzrsdp(j,i,k) + dbp*dconjp(j,i,k)
+                  end do
                end do
             end do
 c
@@ -521,6 +635,7 @@ c
          deallocate (conjp)
          deallocate (vec)
          deallocate (vecp)
+
          deallocate (drsd)
          deallocate (drsdp)
          deallocate (dzrsd)
@@ -529,6 +644,14 @@ c
          deallocate (dconjp)
          deallocate (dvec)
          deallocate (dvecp)
+         deallocate (rsdA)
+         deallocate (rsdpA)
+         deallocate (zrsdA)
+         deallocate (zrsdpA)
+         deallocate (conjA)
+         deallocate (conjpA)
+         deallocate (vecA)
+         deallocate (vecpA)
 c
 c     print the results from the conjugate gradient iteration
 c
@@ -548,21 +671,25 @@ c
             call fatal
          end if
       end if
+
+c field here is actually the residual/gradient 
+c     write(*,*) "field ",polarity(3)*field(1,3),fieldA(1,3)
+      write(*,*) "uind  ",uind(1,3),duinddci(1,3,4)
 c
 c     perform deallocation of some local arrays
 c
       deallocate (field)
       deallocate (fieldp)
-      deallocate (test)
-      deallocate (dfielddci)
-      deallocate (dfieldpdci)
       deallocate (udir)
       deallocate (udirp)
       deallocate (dudir)
       deallocate (dudirp)
 
-      write(*,*) "effect on 3 by 4",uind(1,3),duinddci(1,3,4)
-      write(*,*) "effect on 4 by 4",uind(1,4),duinddci(1,4,4)
+      deallocate (test)
+      deallocate (dfielddci)
+      deallocate (dfieldpdci)
+      deallocate (fieldA)
+      deallocate (fieldpA)
 
       write(*,*) "Done with induce0a."
       return
@@ -1638,7 +1765,9 @@ c     induced dipole moments via Ewald summation
 c
 c
 c     subroutine ufield0c (field,fieldp)
-      subroutine ufield0c (field,fieldp,dfielddci,dfieldpdci)
+c     subroutine ufield0c (field,fieldp,dfielddci,dfieldpdci)
+      subroutine ufield0c (field,fieldp,dfielddci,dfieldpdci,
+     & fieldA,fieldpA)
       use sizes
       use atoms
       use boxes
@@ -1656,6 +1785,8 @@ c     subroutine ufield0c (field,fieldp)
       real*8 fieldp(3,*)
       real*8 dfielddci(3,npole,*)
       real*8 dfieldpdci(3,npole,*)
+      real*8 fieldA(3,*)
+      real*8 fieldpA(3,*)
 c
       write(*,*) "Entering ufield0c."
 c
@@ -1665,6 +1796,9 @@ c
          do j = 1, 3
             field(j,i) = 0.0d0
             fieldp(j,i) = 0.0d0
+
+            fieldA(j,i) = 0.0d0
+            fieldpA(j,i) = 0.0d0
             do k = 1, npole
               dfielddci(j,i,k) = 0.0d0
               dfieldpdci(j,i,k) = 0.0d0
@@ -1675,22 +1809,28 @@ c
 c     get the reciprocal space part of the electrostatic field
 c
 c     call umutual1 (field,fieldp)
-      call umutual1 (field,fieldp,dfielddci,dfieldpdci)
-      write(*,*) "field"
-      write(*,*) "effect on 3 by 4",field(1,3),dfielddci(1,3,4)
-      write(*,*) "effect on 4 by 4",field(1,4),dfielddci(1,4,4)
+c     call umutual1 (field,fieldp,dfielddci,dfieldpdci)
+      call umutual1 (field,fieldp,dfielddci,dfieldpdci,
+     & fieldA,fieldpA)
+c     write(*,*) "field"
+      write(*,*) "field(1,1) dq on 4",fieldA(1,1),dfielddci(1,1,4)
+c     write(*,*) "effect on 3 by 4",field(1,3),dfielddci(1,3,4)
+c     write(*,*) "effect on 4 by 4",field(1,4),dfielddci(1,4,4)
 c
 c     get the real space portion of the electrostatic field
 c
       if (use_mlist) then
 c        call umutual2b (field,fieldp)
-         call umutual2b (field,fieldp,dfielddci,dfieldpdci)
+c        call umutual2b (field,fieldp,dfielddci,dfieldpdci)
+         call umutual2b (field,fieldp,dfielddci,dfieldpdci,
+     & fieldA,fieldpA)
       else
          call umutual2a (field,fieldp)
       end if
-      write(*,*) "field"
-      write(*,*) "effect on 3 by 4",field(1,3),dfielddci(1,3,4)
-      write(*,*) "effect on 4 by 4",field(1,4),dfielddci(1,4,4)
+c     write(*,*) "field"
+      write(*,*) "field(1,1) dq on 4",fieldA(1,1),dfielddci(1,1,4)
+c     write(*,*) "effect on 3 by 4",field(1,3),dfielddci(1,3,4)
+c     write(*,*) "effect on 4 by 4",field(1,4),dfielddci(1,4,4)
 c
 c     get the self-energy portion of the electrostatic field
 c
@@ -1699,6 +1839,9 @@ c
          do j = 1, 3
             field(j,i) = field(j,i) + term*uind(j,i)
             fieldp(j,i) = fieldp(j,i) + term*uinp(j,i)
+c MES
+            fieldA(j,i) = fieldA(j,i) + term*uind(j,i)
+            fieldpA(j,i) = fieldpA(j,i) + term*uinp(j,i)
             do k = 1, npole
               dfielddci(j,i,k) = dfielddci(j,i,k) + term*duinddci(j,i,k)
               dfieldpdci(j,i,k) = dfieldpdci(j,i,k) 
@@ -1706,12 +1849,14 @@ c
             end do
          end do
       end do
-      write(*,*) "field"
-      write(*,*) "effect on 3 by 4",field(1,3),dfielddci(1,3,4)
-      write(*,*) "effect on 4 by 4",field(1,4),dfielddci(1,4,4)
-      write(*,*) "uind"
-      write(*,*) "effect on 3 by 4",uind(1,3),duinddci(1,3,4)
-      write(*,*) "effect on 4 by 4",uind(1,4),duinddci(1,4,4)
+c     write(*,*) "field"
+      write(*,*) "field(1,1) dq on 4",fieldA(1,1),dfielddci(1,1,4)
+c     write(*,*) "effect on 3 by 4",
+c    & field(1,3),fieldA(1,3),dfielddci(1,3,4)
+c     write(*,*) "effect on 4 by 4",field(1,4),dfielddci(1,4,4)
+c     write(*,*) "uind"
+c     write(*,*) "effect on 3 by 4",uind(1,3),duinddci(1,3,4)
+c     write(*,*) "effect on 4 by 4",uind(1,4),duinddci(1,4,4)
 c
 c     compute the cell dipole boundary correction to the field
 c
@@ -2818,7 +2963,7 @@ c
      &                     - bcn(1)*diy - 2.0d0*bcn(2)*qiy
                fkmd(3) = zr*(bcn(1)*ci+bcn(2)*dir+bcn(3)*qir)
      &                     - bcn(1)*diz - 2.0d0*bcn(2)*qiz
-c MES : add derivatives here
+c DCT
                dfimddci(1) = 0.0d0
                dfimddci(2) = 0.0d0
                dfimddci(3) = 0.0d0
@@ -3007,7 +3152,9 @@ c     induced atomic dipole moments to the field
 c
 c
 c     subroutine umutual1 (field,fieldp)
-      subroutine umutual1 (field,fieldp,dfielddci,dfieldpdci)
+c     subroutine umutual1 (field,fieldp,dfielddci,dfieldpdci)
+      subroutine umutual1 (field,fieldp,dfielddci,dfieldpdci,
+     & fieldA,fieldpA)
       use sizes
       use boxes
       use ewald
@@ -3023,6 +3170,8 @@ c     subroutine umutual1 (field,fieldp)
       real*8 fieldp(3,*)
       real*8 dfielddci(3,npole,*)
       real*8 dfieldpdci(3,npole,*)
+      real*8 fieldA(3,*)
+      real*8 fieldpA(3,*)
       real*8, allocatable :: fuind(:,:)
       real*8, allocatable :: fuinp(:,:)
       real*8, allocatable :: fdip_phi1(:,:)
@@ -3037,6 +3186,11 @@ c DCT
       real*8, allocatable :: dfdip_sum_phi(:,:,:)
       real*8, allocatable :: ddipfield1dci(:,:,:)
       real*8, allocatable :: ddipfield2dci(:,:,:)
+      real*8, allocatable :: fdip_phi1a(:,:)
+      real*8, allocatable :: fdip_phi2a(:,:)
+      real*8, allocatable :: fdip_sum_phia(:,:)
+      real*8, allocatable :: dipfield1a(:,:)
+      real*8, allocatable :: dipfield2a(:,:)
 c
       write(*,*) "Entering umutual1"
 c
@@ -3060,6 +3214,11 @@ c DCT
       allocate (dfdip_sum_phi(20,npole,npole))
       allocate (ddipfield1dci(3,npole,npole))
       allocate (ddipfield2dci(3,npole,npole))
+      allocate (fdip_phi1a(10,npole))
+      allocate (fdip_phi2a(10,npole))
+      allocate (fdip_sum_phia(20,npole))
+      allocate (dipfield1a(3,npole))
+      allocate (dipfield2a(3,npole))
 c
 c     convert Cartesian dipoles to fractional coordinates
 c
@@ -3084,6 +3243,9 @@ c MES
          end do
       end do
 c
+      write(*,*) uind(1,3),duinddci(1,3,4)
+      write(*,*) fuind(1,3),dfuinddci(1,3,4)
+
 c     assign PME grid and perform 3-D FFT forward transform
 c
 c     call grid_uind (fuind,fuinp)
@@ -3268,13 +3430,15 @@ c     write(*,*) dqgrdci(1,10,8,7,3),dqgrdciX(1,10,8,7,3,4)
 
 c     call fphi_uind (fdip_phi1,fdip_phi2,fdip_sum_phi)
       call fphi_uindCT (fdip_phi1,fdip_phi2,fdip_sum_phi,
-     & dfdip_phi1,dfdip_phi2,dfdip_sum_phi)
-      write(*,*) "fdip_phi1"
-      write(*,*) fdip_phi1(2,3),dfdip_phi1(2,3,4)
-      write(*,*) "fdip_phi2"
-      write(*,*) fdip_phi2(2,3),dfdip_phi2(2,3,4)
-      write(*,*) "fdip_sum_phi"
-      write(*,*) fdip_sum_phi(2,3),dfdip_sum_phi(2,3,4)
+     & dfdip_phi1,dfdip_phi2,dfdip_sum_phi,
+     & fdip_phi1a,fdip_phi2a,fdip_sum_phia)
+c     write(*,*) "fdip_phi1"
+c     write(*,*) fdip_phi1(2,3),fdip_phi1a(2,3),dfdip_phi1(2,3,4)
+c     write(*,*) "fdip_phi2"
+c     write(*,*) fdip_phi2(2,3),fdip_phi1a(2,3),dfdip_phi2(2,3,4)
+c     write(*,*) "fdip_sum_phi"
+c     write(*,*) fdip_sum_phi(2,3),fdip_sum_phia(2,3),
+c    & dfdip_sum_phi(2,3,4)
 c
 c     convert the dipole fields from fractional to Cartesian
 c
@@ -3294,14 +3458,26 @@ c
      &                          + a(k,2)*fdip_phi2(3,i)
      &                          + a(k,3)*fdip_phi2(4,i)
 c MES
-c           ddipfield1dci(k,i) = a(k,1)*dfdip_phi1dci(2,i)
-c    &                          + a(k,2)*dfdip_phi1dci(3,i)
-c    &                          + a(k,3)*dfdip_phi1dci(4,i)
-c           ddipfield2dci(k,i) = a(k,1)*dfdip_phi2dci(2,i)
-c    &                          + a(k,2)*dfdip_phi2dci(3,i)
-c    &                          + a(k,3)*dfdip_phi2dci(4,i)
+            dipfield1a(k,i) = a(k,1)*fdip_phi1a(2,i)
+     &                          + a(k,2)*fdip_phi1a(3,i)
+     &                          + a(k,3)*fdip_phi1a(4,i)
+            dipfield2a(k,i) = a(k,1)*fdip_phi2a(2,i)
+     &                          + a(k,2)*fdip_phi2a(3,i)
+     &                          + a(k,3)*fdip_phi2a(4,i)
+
+            do j = 1, npole
+              ddipfield1dci(k,i,j) = a(k,1)*dfdip_phi1(2,i,j)
+     &                          + a(k,2)*dfdip_phi1(3,i,j)
+     &                          + a(k,3)*dfdip_phi1(4,i,j)
+              ddipfield2dci(k,i,j) = a(k,1)*dfdip_phi2(2,i,j)
+     &                          + a(k,2)*dfdip_phi2(3,i,j)
+     &                          + a(k,3)*dfdip_phi2(4,i,j)
+            end do
          end do
       end do
+c     write(*,*) "dipfield1"
+c     write(*,*) dipfield1(1,3),dipfield1a(1,3),
+c    & ddipfield1dci(1,3,4)
 c
 c     increment the field at each multipole site
 c
@@ -3310,10 +3486,19 @@ c
             field(k,i) = field(k,i) - dipfield1(k,i)
             fieldp(k,i) = fieldp(k,i) - dipfield2(k,i)
 c MES
-c           dfielddci(k,i) = dfielddci(k,i) - ddipfield1dci(k,i)
-c           dfieldpdci(k,i) = dfieldpdci(k,i) - ddipfield2dci(k,i)
+            fieldA(k,i) = fieldA(k,i) - dipfield1a(k,i)
+            fieldpA(k,i) = fieldpA(k,i) - dipfield2a(k,i)
+            do j = 1, npole
+              dfielddci(k,i,j) = dfielddci(k,i,j) 
+     & - ddipfield1dci(k,i,j)
+              dfieldpdci(k,i,j) = dfieldpdci(k,i,j) 
+     & - ddipfield2dci(k,i,j)
+            end do
          end do
       end do
+c     write(*,*) "field"
+c     write(*,*) field(1,3),fieldA(1,3),
+c    & dfielddci(1,3,4)
 c
 c     perform deallocation of some local arrays
 c
@@ -3331,6 +3516,11 @@ c
       deallocate (dfdip_sum_phi)
       deallocate (ddipfield1dci)
       deallocate (ddipfield2dci)
+      deallocate (fdip_phi1a)
+      deallocate (fdip_phi2a)
+      deallocate (fdip_sum_phia)
+      deallocate (dipfield1a)
+      deallocate (dipfield2a)
 
       write(*,*) "Done with umutual1"
       return
@@ -3678,21 +3868,33 @@ c     atomic dipole moments to the field via a neighbor list
 c
 c
 c     subroutine umutual2b (field,fieldp)
-      subroutine umutual2b (field,fieldp,dfielddci,dfieldpdci)
+c     subroutine umutual2b (field,fieldp,dfielddci,dfieldpdci)
+      subroutine umutual2b (field,fieldp,dfielddci,dfieldpdci,
+     & fieldA,fieldpA)
       use sizes
       use mpole
       use polar
       use tarray
       implicit none
-      integer i,j,k,m
+      integer i,j,k,m,ii
       real*8 fimd(3),fkmd(3)
       real*8 fimp(3),fkmp(3)
       real*8 field(3,*)
       real*8 fieldp(3,*)
-      real*8 dfielddci(3,*)
-      real*8 dfieldpdci(3,*)
+      real*8 dfielddci(3,npole,npole)
+      real*8 dfieldpdci(3,npole,npole)
+      real*8 fieldA(3,*)
+      real*8 fieldpA(3,*)
       real*8, allocatable :: fieldt(:,:)
       real*8, allocatable :: fieldtp(:,:)
+      real*8, allocatable :: fieldtA(:,:)
+      real*8, allocatable :: fieldtpA(:,:)
+      real*8, allocatable :: dfieldtdci(:,:,:)
+      real*8, allocatable :: dfieldtpdci(:,:,:)
+      real*8, allocatable :: dfimddci(:,:)
+      real*8, allocatable :: dfkmddci(:,:)
+      real*8, allocatable :: dfimpdci(:,:)
+      real*8, allocatable :: dfkmpdci(:,:)
 c
       write(*,*) "Entering umutual2b"
 c
@@ -3704,11 +3906,23 @@ c     perform dynamic allocation of some local arrays
 c
       allocate (fieldt(3,npole))
       allocate (fieldtp(3,npole))
+      allocate (fieldtA(3,npole))
+      allocate (fieldtpA(3,npole))
+      allocate (dfieldtdci(3,npole,npole))
+      allocate (dfieldtpdci(3,npole,npole))
+      allocate (dfimddci(3,npole))
+      allocate (dfkmddci(3,npole))
+      allocate (dfimpdci(3,npole))
+      allocate (dfkmpdci(3,npole))
+
+c     write(*,*) uind(1,1),duinddci(1,1,4)
 c
 c     set OpenMP directives for the major loop structure
 c
 !$OMP PARALLEL default(private) shared(npole,uind,uinp,ntpair,tindex,
-!$OMP& tdipdip,field,fieldp,fieldt,fieldtp)
+!$OMP& tdipdip,field,fieldp,fieldt,fieldtp,
+!$OMP& fieldtA,fieldtpA,fieldA,fieldpA,
+!$OMP& dfieldtdci,dfieldtpdci,dfielddci,dfieldpdci)
 c
 c     initialize local variables for OpenMP calculation
 c
@@ -3717,13 +3931,21 @@ c
          do j = 1, 3
             fieldt(j,i) = 0.0d0
             fieldtp(j,i) = 0.0d0
+            fieldtA(j,i) = 0.0d0
+            fieldtpA(j,i) = 0.0d0
+            do k = 1, npole
+               dfieldtdci(j,i,k) = 0.0d0
+               dfieldtpdci(j,i,k) = 0.0d0
+            end do
          end do
       end do
 !$OMP END DO
 c
 c     find the field terms for each pairwise interaction
+c tdipdip is contains distance terms only
+c    calc in udirect as dlocal
 c
-!$OMP DO reduction(+:fieldt,fieldtp) schedule(guided)
+!$OMP DO reduction(+:fieldt,fieldtp,fieldtA,fieldtpA) schedule(guided)
       do m = 1, ntpair
          i = tindex(1,m)
          k = tindex(2,m)
@@ -3751,44 +3973,48 @@ c
      &                + tdipdip(5,m)*uinp(3,i)
          fkmp(3) = tdipdip(3,m)*uinp(1,i) + tdipdip(5,m)*uinp(2,i)
      &                + tdipdip(6,m)*uinp(3,i)
+c        write(*,*) i,k,fimd(1),fkmd(1) 
 c MES
 c    some of these might need to be dck instead of dci
-c        dfimddci(1) = tdipdip(1,m)*duinddci(1,k) 
-c    &                + tdipdip(2,m)*duinddci(2,k)
-c    &                + tdipdip(3,m)*duinddci(3,k)
-c        dfimddci(2) = tdipdip(2,m)*duinddci(1,k) 
-c    &                + tdipdip(4,m)*duinddci(2,k)
-c    &                + tdipdip(5,m)*duinddci(3,k)
-c        dfimddci(3) = tdipdip(3,m)*duinddci(1,k) 
-c    &                + tdipdip(5,m)*duinddci(2,k)
-c    &                + tdipdip(6,m)*duinddci(3,k)
-c        dfkmddci(1) = tdipdip(1,m)*duinddci(1,i) 
-c    &                + tdipdip(2,m)*duinddci(2,i)
-c    &                + tdipdip(3,m)*duinddci(3,i)
-c        dfkmddci(2) = tdipdip(2,m)*duinddci(1,i) 
-c    &                + tdipdip(4,m)*duinddci(2,i)
-c    &                + tdipdip(5,m)*duinddci(3,i)
-c        dfkmddci(3) = tdipdip(3,m)*duinddci(1,i) 
-c    &                + tdipdip(5,m)*duinddci(2,i)
-c    &                + tdipdip(6,m)*duinddci(3,i)
-c        dfimpdci(1) = tdipdip(1,m)*duinpdci(1,k) 
-c    &                + tdipdip(2,m)*duinpdci(2,k)
-c    &                + tdipdip(3,m)*duinpdci(3,k)
-c        dfimpdci(2) = tdipdip(2,m)*duinpdci(1,k) 
-c    &                + tdipdip(4,m)*duinpdci(2,k)
-c    &                + tdipdip(5,m)*duinpdci(3,k)
-c        dfimpdci(3) = tdipdip(3,m)*duinpdci(1,k) 
-c    &                + tdipdip(5,m)*duinpdci(2,k)
-c    &                + tdipdip(6,m)*duinpdci(3,k)
-c        dfkmpdci(1) = tdipdip(1,m)*duinpdci(1,i) 
-c    &                + tdipdip(2,m)*duinpdci(2,i)
-c    &                + tdipdip(3,m)*duinpdci(3,i)
-c        dfkmpdci(2) = tdipdip(2,m)*duinpdci(1,i) 
-c    &                + tdipdip(4,m)*duinpdci(2,i)
-c    &                + tdipdip(5,m)*duinpdci(3,i)
-c        dfkmpdci(3) = tdipdip(3,m)*duinpdci(1,i) 
-c    &                + tdipdip(5,m)*duinpdci(2,i)
-c    &                + tdipdip(6,m)*duinpdci(3,i)
+         do ii = 1, npole
+            dfimddci(1,ii) = tdipdip(1,m)*duinddci(1,k,ii) 
+     &                + tdipdip(2,m)*duinddci(2,k,ii)
+     &                + tdipdip(3,m)*duinddci(3,k,ii)
+            dfimddci(2,ii) = tdipdip(2,m)*duinddci(1,k,ii) 
+     &                + tdipdip(4,m)*duinddci(2,k,ii)
+     &                + tdipdip(5,m)*duinddci(3,k,ii)
+            dfimddci(3,ii) = tdipdip(3,m)*duinddci(1,k,ii) 
+     &                + tdipdip(5,m)*duinddci(2,k,ii)
+     &                + tdipdip(6,m)*duinddci(3,k,ii)
+            dfkmddci(1,ii) = tdipdip(1,m)*duinddci(1,i,ii) 
+     &                + tdipdip(2,m)*duinddci(2,i,ii)
+     &                + tdipdip(3,m)*duinddci(3,i,ii)
+            dfkmddci(2,ii) = tdipdip(2,m)*duinddci(1,i,ii) 
+     &                + tdipdip(4,m)*duinddci(2,i,ii)
+     &                + tdipdip(5,m)*duinddci(3,i,ii)
+            dfkmddci(3,ii) = tdipdip(3,m)*duinddci(1,i,ii) 
+     &                + tdipdip(5,m)*duinddci(2,i,ii)
+     &                + tdipdip(6,m)*duinddci(3,i,ii)
+            dfimpdci(1,ii) = tdipdip(1,m)*duinpdci(1,k,ii) 
+     &                + tdipdip(2,m)*duinpdci(2,k,ii)
+     &                + tdipdip(3,m)*duinpdci(3,k,ii)
+            dfimpdci(2,ii) = tdipdip(2,m)*duinpdci(1,k,ii) 
+     &                + tdipdip(4,m)*duinpdci(2,k,ii)
+     &                + tdipdip(5,m)*duinpdci(3,k,ii)
+            dfimpdci(3,ii) = tdipdip(3,m)*duinpdci(1,k,ii) 
+     &                + tdipdip(5,m)*duinpdci(2,k,ii)
+     &                + tdipdip(6,m)*duinpdci(3,k,ii)
+            dfkmpdci(1,ii) = tdipdip(1,m)*duinpdci(1,i,ii) 
+     &                + tdipdip(2,m)*duinpdci(2,i,ii)
+     &                + tdipdip(3,m)*duinpdci(3,i,ii)
+            dfkmpdci(2,ii) = tdipdip(2,m)*duinpdci(1,i,ii) 
+     &                + tdipdip(4,m)*duinpdci(2,i,ii)
+     &                + tdipdip(5,m)*duinpdci(3,i,ii)
+            dfkmpdci(3,ii) = tdipdip(3,m)*duinpdci(1,i,ii) 
+     &                + tdipdip(5,m)*duinpdci(2,i,ii)
+     &                + tdipdip(6,m)*duinpdci(3,i,ii)
+c           write(*,*) "    ",ii,dfimddci(1,ii),dfkmddci(1,ii) 
+         end do
 c
 c     increment the field at each site due to this interaction
 c
@@ -3798,12 +4024,28 @@ c
             fieldtp(j,i) = fieldtp(j,i) + fimp(j)
             fieldtp(j,k) = fieldtp(j,k) + fkmp(j)
 c MES
-c           dfieldtdci(j,i) = dfieldtdci(j,i) + dfimddci(j)
-c           dfieldtdci(j,k) = dfieldtdci(j,k) + dfkmddci(j)
-c           dfieldtpdci(j,i) = dfieldtpdci(j,i) + dfimpdci(j)
-c           dfieldtpdci(j,k) = dfieldtpdci(j,k) + dfkmpdci(j)
+            fieldtA(j,i) = fieldtA(j,i) + fimd(j)
+            fieldtA(j,k) = fieldtA(j,k) + fkmd(j)
+            fieldtpA(j,i) = fieldtpA(j,i) + fimp(j)
+            fieldtpA(j,k) = fieldtpA(j,k) + fkmp(j)
+
+            do ii = 1, npole
+               dfieldtdci(j,i,ii) = dfieldtdci(j,i,ii) 
+     & + dfimddci(j,ii)
+               dfieldtdci(j,k,ii) = dfieldtdci(j,k,ii) 
+     & + dfkmddci(j,ii)
+               dfieldtpdci(j,i,ii) = dfieldtpdci(j,i,ii) 
+     & + dfimpdci(j,ii)
+               dfieldtpdci(j,k,ii) = dfieldtpdci(j,k,ii) 
+     & + dfkmpdci(j,ii)
+            end do
          end do
+c        end of j loop
+
+c        write(*,*) i,fieldt(1,i),fieldtA(1,i),dfieldtdci(1,i,4)
+c        write(*,*) k,fieldt(1,i),fieldtA(1,k),dfieldtdci(1,k,4)
       end do
+c     end of neighbor list loop
 !$OMP END DO
 c
 c     end OpenMP directives for the major loop structure
@@ -3814,8 +4056,14 @@ c
             field(j,i) = fieldt(j,i) + field(j,i)
             fieldp(j,i) = fieldtp(j,i) + fieldp(j,i)
 c MES
-c           dfielddci(j,i) = dfieldtdci(j,i) + dfielddci(j,i)
-c           dfieldpdci(j,i) = dfieldtpdci(j,i) + dfieldpdci(j,i)
+            fieldA(j,i) = fieldtA(j,i) + fieldA(j,i)
+            fieldpA(j,i) = fieldtpA(j,i) + fieldpA(j,i)
+            do ii = 1, npole
+               dfielddci(j,i,ii) = dfieldtdci(j,i,ii) 
+     & + dfielddci(j,i,ii)
+               dfieldpdci(j,i,ii) = dfieldtpdci(j,i,ii) 
+     & + dfieldpdci(j,i,ii)
+            end do
          end do
       end do
 !$OMP END DO
@@ -3823,8 +4071,16 @@ c           dfieldpdci(j,i) = dfieldtpdci(j,i) + dfieldpdci(j,i)
 c
 c     perform deallocation of some local arrays
 c
+c     write(*,*) field(1,3),fieldA(1,3),dfielddci(1,3,4)
+
       deallocate (fieldt)
       deallocate (fieldtp)
+      deallocate (fieldtA)
+      deallocate (fieldtpA)
+      deallocate (dfimddci)
+      deallocate (dfkmddci)
+      deallocate (dfimpdci)
+      deallocate (dfkmpdci)
 
       write(*,*) "Done with umutual2b"
       return
@@ -6247,7 +6503,9 @@ c     gradient induced dipole solver using a neighbor pair list
 c     zrsd, zrsdp are converted to conj, conjp in induce0a
 c
 c
-      subroutine uscale0b (mode,rsd,rsdp,zrsd,zrsdp)
+c     subroutine uscale0b (mode,rsd,rsdp,zrsd,zrsdp)
+      subroutine uscale0b (mode,rsd,rsdp,zrsd,zrsdp,rsdA,rsdpA,
+     & zrsdA,zrsdpA,drsd,drsdp,dzrsd,dzrsdp)
       use sizes
       use atoms
       use mpole
@@ -6275,11 +6533,27 @@ c
       real*8 rsdp(3,*)
       real*8 zrsd(3,*)
       real*8 zrsdp(3,*)
+
+      real*8 drsd(3,npole,npole)
+      real*8 drsdp(3,npole,npole)
+      real*8 rsdA(3,*)
+      real*8 rsdpA(3,*)
+      real*8 zrsdA(3,*)
+      real*8 zrsdpA(3,*)
+      real*8 dzrsd(3,npole,npole)
+      real*8 dzrsdp(3,npole,npole)
+      real*8, allocatable :: zrsdtA(:,:)
+      real*8, allocatable :: zrsdtpA(:,:)
+      real*8, allocatable :: dzrsdt(:,:,:)
+      real*8, allocatable :: dzrsdtp(:,:,:)
+      real*8, allocatable :: test(:,:,:,:)
+
       real*8, allocatable :: zrsdt(:,:)
       real*8, allocatable :: zrsdtp(:,:)
       character*6 mode
 c
       write(*,*) "Entered uscale0b with mode ",mode
+c     write(*,*) "rsd  ",rsd(1,1),rsdA(1,1),drsd(1,1,4)
 c
 c     apply the preconditioning matrix to the current residual
 c
@@ -6289,6 +6563,11 @@ c     perform dynamic allocation of some local arrays
 c
          allocate (zrsdt(3,npole))
          allocate (zrsdtp(3,npole))
+         allocate (dzrsdt(3,npole,npole))
+         allocate (dzrsdtp(3,npole,npole))
+         allocate (zrsdtA(3,npole))
+         allocate (zrsdtpA(3,npole))
+         allocate (test(3,npole,npole,npole))
 c
 c     use diagonal preconditioner elements as first approximation
 c
@@ -6300,14 +6579,37 @@ c
                zrsdp(j,i) = 0.0d0
                zrsdt(j,i) = poli * rsd(j,i)
                zrsdtp(j,i) = poli * rsdp(j,i)
+
+               zrsdA(j,i) = 0.0d0
+               zrsdpA(j,i) = 0.0d0
+               zrsdtA(j,i) = poli * rsdA(j,i)
+               zrsdtpA(j,i) = poli * rsdpA(j,i)
+               do k = 1, npole
+                  dzrsd(j,i,k) = 0.0d0
+                  dzrsdp(j,i,k) = 0.0d0
+                  dzrsdt(j,i,k) = poli * drsd(j,i,k)
+                  dzrsdtp(j,i,k) = poli * drsdp(j,i,k)
+c                 do ii = 1, npole
+c                    test(j,i,k,ii) = poli * drsd(j,i,k)
+c                 end do
+               end do
             end do
          end do
+c MES ok here
+         write(*,*) "rsd  ",rsd(1,1),rsdA(1,1),drsd(1,1,4)
+c        write(*,*) "zrsdt ",zrsdt(1,3),zrsdtA(1,3),dzrsdt(1,3,4)
+         write(*,*) "zrsdt(1,1) ",zrsdt(1,1),zrsdtA(1,1)
+         write(*,*) "dzrsdt(1,1,4) ",dzrsdt(1,1,4)
 c
 c     use the off-diagonal preconditioner elements in second phase
 c
 !$OMP PARALLEL default(private) shared(npole,mindex,minv,nulst,ulst,
-!$OMP& rsd,rsdp,zrsd,zrsdp,zrsdt,zrsdtp)
-!$OMP DO reduction(+:zrsdt,zrsdtp) schedule(guided)
+!$OMP& rsd,rsdp,zrsd,zrsdp,zrsdt,zrsdtp,
+!$OMP& rsdA,rsdpA,zrsdA,zrsdpA,zrsdtA,zrsdtpA,
+!$OMP& drsd,drsdp,dzrsd,dzrsdp,dzrsdt,dzrsdtp)
+!$OMP DO reduction(+:zrsdt,zrsdtp,zrsdtA,zrsdtpA,dzrsdt,
+!$OMP& dzrsdtp) schedule(guided)
+c !$OMP DO reduction(+:zrsdt,zrsdtp) schedule(guided)
          do i = 1, npole
             m = mindex(i)
             do kk = 1, nulst(i)
@@ -6319,6 +6621,7 @@ c
                m5 = minv(m+5)
                m6 = minv(m+6)
                m = m + 6
+
                zrsdt(1,i) = zrsdt(1,i) + m1*rsd(1,k) + m2*rsd(2,k)
      &                        + m3*rsd(3,k)
                zrsdt(2,i) = zrsdt(2,i) + m2*rsd(1,k) + m4*rsd(2,k)
@@ -6343,9 +6646,95 @@ c
      &                         + m5*rsdp(3,i)
                zrsdtp(3,k) = zrsdtp(3,k) + m3*rsdp(1,i) + m5*rsdp(2,i)
      &                         + m6*rsdp(3,i)
+
+c MES
+c MES : FAILS HERE
+               zrsdtA(1,i) = zrsdtA(1,i) + m1*rsdA(1,k)
+     &                        + m2*rsdA(2,k) + m3*rsdA(3,k)
+               zrsdtA(2,i) = zrsdtA(2,i) + m2*rsdA(1,k) 
+     &                        + m4*rsdA(2,k) + m5*rsdA(3,k)
+               zrsdtA(3,i) = zrsdtA(3,i) + m3*rsdA(1,k) 
+     &                        + m5*rsdA(2,k)+ m6*rsdA(3,k)
+               zrsdtA(1,k) = zrsdtA(1,k) + m1*rsdA(1,i) 
+     &                        + m2*rsdA(2,i) + m3*rsdA(3,i)
+               zrsdtA(2,k) = zrsdtA(2,k) + m2*rsdA(1,i) 
+     &                        + m4*rsdA(2,i) + m5*rsdA(3,i)
+               zrsdtA(3,k) = zrsdtA(3,k) + m3*rsdA(1,i) 
+     &                        + m5*rsdA(2,i) + m6*rsdA(3,i)
+               zrsdtpA(1,i) = zrsdtpA(1,i) + m1*rsdpA(1,k) 
+     &                         + m2*rsdpA(2,k) + m3*rsdpA(3,k)
+               zrsdtpA(2,i) = zrsdtpA(2,i) + m2*rsdpA(1,k) 
+     &                         + m4*rsdpA(2,k) + m5*rsdpA(3,k)
+               zrsdtpA(3,i) = zrsdtpA(3,i) + m3*rsdpA(1,k)
+     &                         + m5*rsdpA(2,k) + m6*rsdpA(3,k)
+               zrsdtpA(1,k) = zrsdtpA(1,k) + m1*rsdpA(1,i) 
+     &                         + m2*rsdpA(2,i) + m3*rsdpA(3,i)
+               zrsdtpA(2,k) = zrsdtpA(2,k) + m2*rsdpA(1,i) 
+     &                         + m4*rsdpA(2,i) + m5*rsdpA(3,i)
+               zrsdtpA(3,k) = zrsdtpA(3,k) + m3*rsdpA(1,i) 
+     &                         + m5*rsdpA(2,i) + m6*rsdpA(3,i)
+
+c              if (i.eq.1 .and. k.eq.2) then
+c                write(*,*) " "
+c                write(*,*) i,k,zrsdt(1,i),zrsdtA(1,i)
+c                write(*,*) k,zrsdt(1,k),zrsdtA(1,k)
+c              endif
+               do ii = 1, npole
+c                if (i.eq.1 .and. k.eq.2) write(*,*) ii,dzrsdt(1,i,ii)
+                 dzrsdt(1,i,ii) = dzrsdt(1,i,ii) + m1*drsd(1,k,ii) 
+     &                        + m2*drsd(2,k,ii) + m3*drsd(3,k,ii)
+c                if (i.eq.1 .and. k.eq.2) write(*,*) ii,dzrsdt(1,i,ii)
+                 dzrsdt(2,i,ii) = dzrsdt(2,i,ii) + m2*drsd(1,k,ii) 
+     &                        + m4*drsd(2,k,ii) + m5*drsd(3,k,ii)
+                 dzrsdt(3,i,ii) = dzrsdt(3,i,ii) + m3*drsd(1,k,ii) 
+     &                        + m5*drsd(2,k,ii)+ m6*drsd(3,k,ii)
+                 dzrsdt(1,k,ii) = dzrsdt(1,k,ii) + m1*drsd(1,i,ii) 
+     &                        + m2*drsd(2,i,ii) + m3*drsd(3,i,ii)
+                 dzrsdt(2,k,ii) = dzrsdt(2,k,ii) + m2*drsd(1,i,ii) 
+     &                        + m4*drsd(2,i,ii) + m5*drsd(3,i,ii)
+                 dzrsdt(3,k,ii) = dzrsdt(3,k,ii) + m3*drsd(1,i,ii) 
+     &                        + m5*drsd(2,i,ii) + m6*drsd(3,i,ii)
+                 dzrsdtp(1,i,ii) = dzrsdtp(1,i,ii) + m1*drsdp(1,k,ii)
+     &                         + m2*drsdp(2,k,ii) + m3*drsdp(3,k,ii)
+                 dzrsdtp(2,i,ii) = dzrsdtp(2,i,ii) + m2*drsdp(1,k,ii)
+     &                         + m4*drsdp(2,k,ii) + m5*drsdp(3,k,ii)
+                 dzrsdtp(3,i,ii) = dzrsdtp(3,i,ii) + m3*drsdp(1,k,ii)
+     &                         + m5*drsdp(2,k,ii) + m6*drsdp(3,k,ii)
+                 dzrsdtp(1,k,ii) = dzrsdtp(1,k,ii) + m1*drsdp(1,i,ii)
+     &                         + m2*drsdp(2,i,ii) + m3*drsdp(3,i,ii)
+                 dzrsdtp(2,k,ii) = dzrsdtp(2,k,ii) + m2*drsdp(1,i,ii)
+     &                         + m4*drsdp(2,i,ii) + m5*drsdp(3,i,ii)
+                 dzrsdtp(3,k,ii) = dzrsdtp(3,k,ii) + m3*drsdp(1,i,ii)
+     &                         + m5*drsdp(2,i,ii) + m6*drsdp(3,i,ii)
+
+c                write(*,*) ii,dzrsdt(1,i,ii),dzrsdt(1,k,ii)
+
+               end do
+
+c              do ii = 1, npole
+c                if (i.eq.1 .and. k.eq.2) write(*,*) ii,test(1,i,k,ii)
+c                test(1,i,k,ii) = test(1,i,k,ii) + m1*drsd(1,k,ii)
+c    &                        + m2*drsd(2,k,ii) + m3*drsd(3,k,ii)
+c                if (i.eq.1 .and. k.eq.2) write(*,*) ii,test(1,i,k,ii)
+c                test(2,i,k,ii) = test(2,i,k,ii) + m2*drsd(1,k,ii)
+c    &                        + m4*drsd(2,k,ii) + m5*drsd(3,k,ii)
+c                test(3,i,k,ii) = test(3,i,k,ii) + m3*drsd(1,k,ii)
+c    &                        + m5*drsd(2,k,ii)+ m6*drsd(3,k,ii)
+c                test(1,k,i,ii) = test(1,k,i,ii) + m1*drsd(1,i,ii)
+c    &                        + m2*drsd(2,i,ii) + m3*drsd(3,i,ii)
+c                test(2,k,i,ii) = test(2,k,i,ii) + m2*drsd(1,i,ii)
+c    &                        + m4*drsd(2,i,ii) + m5*drsd(3,i,ii)
+c                test(3,k,i,ii) = test(3,k,i,ii) + m3*drsd(1,i,ii)
+c    &                        + m5*drsd(2,i,ii) + m6*drsd(3,i,ii)
+c
+c              end do
+
             end do
          end do
 !$OMP END DO
+
+         write(*,*) "zrsdt(1,1) ",zrsdt(1,1),zrsdtA(1,1)
+         write(*,*) "dzrsdt(1,1) ",dzrsdt(1,1,4)
 c
 c     transfer the results from local to global arrays
 c
@@ -6354,18 +6743,34 @@ c
             do j = 1, 3
                zrsd(j,i) = zrsdt(j,i) + zrsd(j,i)
                zrsdp(j,i) = zrsdtp(j,i) + zrsdp(j,i)
+
+c MES
+               zrsdA(j,i) = zrsdtA(j,i) + zrsdA(j,i)
+               zrsdpA(j,i) = zrsdtpA(j,i) + zrsdpA(j,i)
+               do k = 1, npole
+                 dzrsd(j,i,k) = dzrsdt(j,i,k) + dzrsd(j,i,k)
+                 dzrsdp(j,i,k) = dzrsdtp(j,i,k) + dzrsdp(j,i,k)
+               end do
             end do
          end do
 !$OMP END DO
 !$OMP END PARALLEL
+
+c        write(*,*) "zrsd ",zrsd(1,3),zrsdA(1,3),dzrsd(1,3,4)
 c
 c     perform deallocation of some local arrays
 c
          deallocate (zrsdt)
          deallocate (zrsdtp)
+         deallocate (dzrsdt)
+         deallocate (dzrsdtp)
+         deallocate (zrsdtA)
+         deallocate (zrsdtpA)
+         deallocate (test)
 c
 c     build the off-diagonal elements of preconditioning matrix
 c
+c MES : build mode sets up scaling factors
       else if (mode .eq. 'BUILD') then
          m = 0
          do i = 1, npole

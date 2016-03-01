@@ -22,14 +22,22 @@ c
       use mpole
       use potent
       implicit none
-      integer i,j,ii
+      integer i,j,ii,kk
+      real*8 delta,q0
 c
 c
 c     choose the method for summing over multipole interactions
 c
       if (use_ewald) then
          if (use_mlist) then
+c           q0 = rpole(1,4)
+c           delta = 0.0001
+c           do kk = -1, 1
+c           rpole(1,4) = q0 + real(kk)*delta
+c           write(*,*) "Loop ",kk," q(4) = ",rpole(1,4)
             call empole1d
+c           end do
+c           rpole(1,4) = q0
          else
             call empole1c
          end if
@@ -4600,7 +4608,7 @@ c
 c     compute the induced dipole moment at each atom
 c
       call induce
-      write(*,*) "Back in empole1d"
+      write(*,*) "Back in empole1d ",duinddci(1,3,4)
 c MES debug
 c     dq = 0.00001d0
 c     rpole(1,4) = rpole(1,4) - dq
@@ -4608,17 +4616,19 @@ c
 c     compute the reciprocal space part of the Ewald summation
 c
       call emrecip1
-c     write(*,*) "after emrecip"
-c     write(*,*) "em, dedci(4) ",em,dedci(4)
-c     write(*,*) "ep, depdci(4) ",ep,depdci(4)
+      write(*,*) "after emrecip"
+      write(*,*) "em, dedci(4) ",em,dedci(4)
+      write(*,*) "ep, depdci(4) ",ep,depdci(4)
 c
 c     compute the real space part of the Ewald summation
 c
       call ereal1d (eintra)
-c     write(*,*) "after ereal"
-c     write(*,*) "em, dedci(4) ",em,dedci(4)
-c     write(*,*) "ep, depdci(4) ",ep,depdci(4)
+      write(*,*) "after ereal"
+      write(*,*) "em, dedci(4) ",em,dedci(4)
+      write(*,*) "ep, depdci(4) ",ep,depdci(4)
 c
+      write(*,*) "uind(1,3) ",uind(1,3),duinddci(1,3,4)       
+
 c     compute the Ewald self-energy term over all the atoms
 c
       term = 2.0d0 * aewald * aewald
@@ -4653,17 +4663,17 @@ c DCT
              djx = rpole(2,j)
              djy = rpole(3,j)
              djz = rpole(4,j)
-c            depdci(i) = depdci(i) + ( fterm * term / 3.0d0 )*
-c    &                   ( djx * duinddci(1,j,i) 
-c    &                   + djy * duinddci(2,j,i)
-c    &                   + djz * duinddci(3,j,i) )
+             depdci(i) = depdci(i) + ( fterm * term / 3.0d0 )*
+     &                   ( djx * duinddci(1,j,i) 
+     &                   + djy * duinddci(2,j,i)
+     &                   + djz * duinddci(3,j,i) )
 c MES : check indices
            end do
          end if
       end do
-c     write(*,*) "after eself"
-c     write(*,*) "em, dedci(4) ",em,dedci(4)
-c     write(*,*) "ep, depdci(4) ",ep,depdci(4)
+      write(*,*) "after eself"
+      write(*,*) "em, dedci(4) ",em,dedci(4)
+      write(*,*) "ep, depdci(4) ",ep,depdci(4)
 
 c adding in depdci for passing dedci to ect1
       if (use_crgtr) then
@@ -5305,42 +5315,42 @@ c
 
 c DCT
                if (use_crgtr) then
-c                  dsci1dci = duinddci(1,i,i)*dk(1) 
-c    &                     + duinddci(2,i,i)*dk(2)
-c    &                     + duinddci(3,i,i)*dk(3) 
-c    &                     + di(1)*duinddci(1,k,i)
-c    &                     + di(2)*duinddci(2,k,i) 
-c    &                     + di(3)*duinddci(3,k,i)
-c                 dsci1dck = duinddci(1,i,k)*dk(1) 
-c    &                     + duinddci(2,i,k)*dk(2)
-c    &                     + duinddci(3,i,k)*dk(3) 
-c    &                     + di(1)*duinddci(1,k,k)
-c    &                     + di(2)*duinddci(2,k,k) 
-c    &                     + di(3)*duinddci(3,k,k)
-c                 dsci3dci = duinddci(1,i,i)*xr 
-c    &                     + duinddci(2,i,i)*yr 
-c    &                     + duinddci(3,i,i)*zr
-c                 dsci3dck = duinddci(1,i,k)*xr
-c    &                     + duinddci(2,i,k)*yr
-c    &                     + duinddci(3,i,k)*zr
-c                 dsci4dci = duinddci(1,k,i)*xr
-c    &                     + duinddci(2,k,i)*yr
-c    &                     + duinddci(3,k,i)*zr
-c                 dsci4dck = duinddci(1,k,k)*xr
-c    &                     + duinddci(2,k,k)*yr
-c    &                     + duinddci(3,k,k)*zr
-c                 dsci7dci = qir(1)*duinddci(1,k,i) 
-c    &                     + qir(2)*duinddci(2,k,i)
-c    &                     + qir(3)*duinddci(3,k,i)
-c                 dsci7dck = qir(1)*duinddci(1,k,k)
-c    &                     + qir(2)*duinddci(2,k,k)
-c    &                     + qir(3)*duinddci(3,k,k)
-c                 dsci8dci = qkr(1)*duinddci(1,i,i) 
-c    &                     + qkr(2)*duinddci(2,i,i)
-c    &                     + qkr(3)*duinddci(3,i,i)
-c                 dsci8dci = qkr(1)*duinddci(1,i,k)
-c    &                     + qkr(2)*duinddci(2,i,k)
-c    &                     + qkr(3)*duinddci(3,i,k)
+                   dsci1dci = duinddci(1,i,i)*dk(1) 
+     &                     + duinddci(2,i,i)*dk(2)
+     &                     + duinddci(3,i,i)*dk(3) 
+     &                     + di(1)*duinddci(1,k,i)
+     &                     + di(2)*duinddci(2,k,i) 
+     &                     + di(3)*duinddci(3,k,i)
+                  dsci1dck = duinddci(1,i,k)*dk(1) 
+     &                     + duinddci(2,i,k)*dk(2)
+     &                     + duinddci(3,i,k)*dk(3) 
+     &                     + di(1)*duinddci(1,k,k)
+     &                     + di(2)*duinddci(2,k,k) 
+     &                     + di(3)*duinddci(3,k,k)
+                  dsci3dci = duinddci(1,i,i)*xr 
+     &                     + duinddci(2,i,i)*yr 
+     &                     + duinddci(3,i,i)*zr
+                  dsci3dck = duinddci(1,i,k)*xr
+     &                     + duinddci(2,i,k)*yr
+     &                     + duinddci(3,i,k)*zr
+                  dsci4dci = duinddci(1,k,i)*xr
+     &                     + duinddci(2,k,i)*yr
+     &                     + duinddci(3,k,i)*zr
+                  dsci4dck = duinddci(1,k,k)*xr
+     &                     + duinddci(2,k,k)*yr
+     &                     + duinddci(3,k,k)*zr
+                  dsci7dci = qir(1)*duinddci(1,k,i) 
+     &                     + qir(2)*duinddci(2,k,i)
+     &                     + qir(3)*duinddci(3,k,i)
+                  dsci7dck = qir(1)*duinddci(1,k,k)
+     &                     + qir(2)*duinddci(2,k,k)
+     &                     + qir(3)*duinddci(3,k,k)
+                  dsci8dci = qkr(1)*duinddci(1,i,i) 
+     &                     + qkr(2)*duinddci(2,i,i)
+     &                     + qkr(3)*duinddci(3,i,i)
+                  dsci8dci = qkr(1)*duinddci(1,i,k)
+     &                     + qkr(2)*duinddci(2,i,k)
+     &                     + qkr(3)*duinddci(3,i,k)
                endif
 
 c
@@ -5371,16 +5381,16 @@ c
 c
 c DCT
                if (use_crgtr) then
-c                 dgli1dci = ck*dsci3dci - sci(4) - ci*dsci4dci
-c                 dgli1dck = sci(3) + ck*dsci3dck - ci*dsci4dck
-c                 dgli2dci = -sc(3)*dsci4dci - sc(4)*dsci3dci
-c                 dgli2dck = -sc(3)*dsci4dck - sc(4)*dsci3dck
-c                 dgli3dci = sc(6)*dsci3dci - sc(5)*dsci4dci
-c                 dgli3dck = sc(6)*dsci3dck - sc(5)*dsci4dck
-c                 dgli6dci = dsci1dci
-c                 dgli6dck = dsci1dck
-c                 dgli7dci = 2.0d0*( dsci7dci - dsci8dci )
-c                 dgli7dck = 2.0d0*( dsci7dck - dsci8dck )
+                  dgli1dci = ck*dsci3dci - sci(4) - ci*dsci4dci
+                  dgli1dck = sci(3) + ck*dsci3dck - ci*dsci4dck
+                  dgli2dci = -sc(3)*dsci4dci - sc(4)*dsci3dci
+                  dgli2dck = -sc(3)*dsci4dck - sc(4)*dsci3dck
+                  dgli3dci = sc(6)*dsci3dci - sc(5)*dsci4dci
+                  dgli3dck = sc(6)*dsci3dck - sc(5)*dsci4dck
+                  dgli6dci = dsci1dci
+                  dgli6dck = dsci1dck
+                  dgli7dci = 2.0d0*( dsci7dci - dsci8dci )
+                  dgli7dck = 2.0d0*( dsci7dck - dsci8dck )
                endif
 
 c     compute the energy contributions for this interaction
@@ -5426,16 +5436,16 @@ c                depdci(k) = depdci(k) + 0.50d0*f
 c    & *sci(3)*(bn(1) - rr3*psc3)
 
 c new version
-c                depdci(i) = depdci(i) + 0.50d0*f
-c    & ( bn(1)*dgli1dci + bn(1)*dgli6dci + bn(2)*dgli2dci 
-c    & + bn(2)*dgli7dci + bn(3)*dgli3dci - rr3*psc3*dgli1dci
-c    & - rr3*psc3*dgli6dci - rr5*psc5*dgli2dci - rr5*psc5*dgli7dci
-c    & - rr7*psc7*dgli3dci )
-c                depdci(k) = depdci(k) + 0.50d0*f
-c    & ( bn(1)*dgli1dck + bn(1)*dgli6dck + bn(2)*dgli2dck 
-c    & + bn(2)*dgli7dck + bn(3)*dgli3dck - rr3*psc3*dgli1dck 
-c    & - rr3*psc3*dgli6dck - rr5*psc5*dgli2dck - rr5*psc5*dgli7dck 
-c    & - rr7*psc7*dgli3dck )
+                 depdci(i) = depdci(i) + 0.50d0*f*
+     & ( bn(1)*dgli1dci + bn(1)*dgli6dci + bn(2)*dgli2dci 
+     & + bn(2)*dgli7dci + bn(3)*dgli3dci - rr3*psc3*dgli1dci
+     & - rr3*psc3*dgli6dci - rr5*psc5*dgli2dci - rr5*psc5*dgli7dci
+     & - rr7*psc7*dgli3dci )
+                 depdci(k) = depdci(k) + 0.50d0*f*
+     & ( bn(1)*dgli1dck + bn(1)*dgli6dck + bn(2)*dgli2dck 
+     & + bn(2)*dgli7dck + bn(3)*dgli3dck - rr3*psc3*dgli1dck 
+     & - rr3*psc3*dgli6dck - rr5*psc5*dgli2dck - rr5*psc5*dgli7dck 
+     & - rr7*psc7*dgli3dck )
                end if
 
 c
@@ -6792,20 +6802,21 @@ c
                fuinp(j,i) = a(j,1)*uinp(1,i) + a(j,2)*uinp(2,i)
      &                          + a(j,3)*uinp(3,i)
 c DCT
-c             do k = 1, npole
-c                dfuinddci(j,i,k) = a(j,1)*duinddci(1,i,k) 
-c    &                          + a(j,2)*duinddci(2,i,k)
-c    &                          + a(j,3)*duinddci(3,i,k)
-c                dfuinpdci(j,i,k) = a(j,1)*duinpdci(1,i,k) 
-c    &                          + a(j,2)*duinpdci(2,i,k)
-c    &                          + a(j,3)*duinpdci(3,i,k)
-c             end do
+              do k = 1, npole
+                 dfuinddci(j,i,k) = a(j,1)*duinddci(1,i,k) 
+     &                          + a(j,2)*duinddci(2,i,k)
+     &                          + a(j,3)*duinddci(3,i,k)
+                 dfuinpdci(j,i,k) = a(j,1)*duinpdci(1,i,k) 
+     &                          + a(j,2)*duinpdci(2,i,k)
+     &                          + a(j,3)*duinpdci(3,i,k)
+              end do
             end do
          end do
 c
 c     assign PME grid and perform 3-D FFT forward transform
 c
-         call grid_uind (fuind,fuinp)
+c        call grid_uind (fuind,fuinp)
+         call grid_uind (fuind,fuinp,dfuinddci,dfuinpdci)
          call fftfront
 c
 c     account for the zeroth grid point for a finite system
@@ -6861,8 +6872,9 @@ c DCT
                  do j = 1,npole
                     depdci(i) = depdci(i) 
      &                        + fuind(k,j)*dfphidciX(k+1,j,i)
-c    &                        + dfuinddci(k,j,i)*fphi(k+1,j) 
+     &                        + dfuinddci(k,j,i)*fphi(k+1,j) 
 c MES : check indices
+c MES debug : may need to add dfielddci calc.s to pmestuff subrout. 
                  end do
                end if 
                f1 = f1 + (fuind(k,i)+fuinp(k,i))*fphi(j1,i)
