@@ -30,14 +30,7 @@ c     choose the method for summing over multipole interactions
 c
       if (use_ewald) then
          if (use_mlist) then
-c           q0 = rpole(1,4)
-c           delta = 0.0001
-c           do kk = -1, 1
-c           rpole(1,4) = q0 + real(kk)*delta
-c           write(*,*) "Loop ",kk," q(4) = ",rpole(1,4)
             call empole1d
-c           end do
-c           rpole(1,4) = q0
          else
             call empole1c
          end if
@@ -4608,10 +4601,6 @@ c
 c     compute the induced dipole moment at each atom
 c
       call induce
-      write(*,*) "Back in empole1d ",duinddci(1,3,4)
-c MES debug
-c     dq = 0.00001d0
-c     rpole(1,4) = rpole(1,4) - dq
 c
 c     compute the reciprocal space part of the Ewald summation
 c
@@ -4627,8 +4616,6 @@ c
       write(*,*) "em, dedci(4) ",em,dedci(4)
       write(*,*) "ep, depdci(4) ",ep,depdci(4)
 c
-      write(*,*) "uind(1,3) ",uind(1,3),duinddci(1,3,4)       
-
 c     compute the Ewald self-energy term over all the atoms
 c
       term = 2.0d0 * aewald * aewald

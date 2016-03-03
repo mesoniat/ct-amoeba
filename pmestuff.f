@@ -50,7 +50,7 @@ c     offset used to shift sites off exact lattice bounds
 c
       eps = 1.0d-8
 c
-      write(*,*) "get the B-spline coefficients for each atomic site"
+c     write(*,*) "get the B-spline coefficients for each atomic site"
 c
       do i = 1, n
          xi = x(i)
@@ -388,7 +388,7 @@ c
       real*8 v0,u0,t0
       real*8 term
 c
-      write(*,*) "Entered grid_pchg"
+c     write(*,*) "Entered grid_pchg"
 c
 c     zero out the particle mesh Ewald charge grid
 c
@@ -466,7 +466,7 @@ c     end OpenMP directive for the major loop structure
 c
 !$OMP END DO
 !$OMP END PARALLEL
-      write(*,*) "Done with grid_pchg"
+c     write(*,*) "Done with grid_pchg"
       return
       end
 c
@@ -677,7 +677,7 @@ c     real*8, allocatable :: dqgrdciX(:,:,:,:,:,:)
       allocate(dterm12dci(npole))
 c     allocate(dqgrdciX(2,nfft1,nfft2,nfft3,npole,npole))
 c
-      write(*,*) "Entered grid_uind"
+c     write(*,*) "Entered grid_uind"
 c
 c     zero out the particle mesh Ewald charge grid
 c
@@ -820,7 +820,7 @@ c
       deallocate(dterm12dci)
 c     deallocate(dqgrdciX)
 
-      write(*,*) "Done with grid_uind"
+c     write(*,*) "Done with grid_uind"
       return
       end
 c
@@ -906,7 +906,7 @@ c
       real*8 dtuv000dqg,dt0,dtu00, dtuv000
       real*8 fphi(20,*)
 c
-      write(*,*) "Entered fphi_mpole"
+c     write(*,*) "Entered fphi_mpole"
 c     write(*,*) "bsorder = ",bsorder
 c
 c     set OpenMP directives for the major loop structure
@@ -1049,7 +1049,7 @@ c
 !$OMP END DO
 !$OMP END PARALLEL
 
-      write(*,*) "end of fphi_mpole"
+c     write(*,*) "end of fphi_mpole"
 
       return
       end
@@ -1103,7 +1103,7 @@ c
       real*8 fdip_phi2(10,*)
       real*8 fdip_sum_phi(20,*)
 c
-      write(*,*) "Entered fphi_uind"
+c     write(*,*) "Entered fphi_uind"
 c
 c     set OpenMP directives for the major loop structure
 c
@@ -1325,7 +1325,7 @@ c     end OpenMP directive for the major loop structure
 c
 !$OMP END DO
 !$OMP END PARALLEL
-      write(*,*) "Done with fphi_uind"
+c     write(*,*) "Done with fphi_uind"
       return
       end
 c
@@ -1661,7 +1661,7 @@ c
       real*8 fphi(20,*)
       real*8 dfphidciX(20,npole,npole)
 c
-      write(*,*) "Entered fphi_mpoleCT"
+c     write(*,*) "Entered fphi_mpoleCT"
 c     write(*,*) "bsorder = ",bsorder
 c     write(*,*) ""
 
@@ -2015,7 +2015,7 @@ c
       deallocate (xdtuv012)
       deallocate (xdtuv111)
 
-      write(*,*) "End of fphi_mpoleCT"
+c     write(*,*) "End of fphi_mpoleCT"
       return
       end
 c     end of fphi_mpoleCT
@@ -2329,7 +2329,7 @@ c
       allocate (dtuv101_2(npole))
       allocate (dtuv011_2(npole))
 c
-      write(*,*) "Entered fphi_uindCT"
+c     write(*,*) "Entered fphi_uindCT"
 c
 c     set OpenMP directives for the major loop structure
 c
@@ -3145,7 +3145,7 @@ c     write(*,*) fdip_phi2(2,3),dfdip_phi2(2,3,4)
 c     write(*,*) "fdip_sum_phi"
 c     write(*,*) fdip_sum_phi(2,3),dfdip_sum_phi(2,3,4)
 
-      write(*,*) "Done with fphi_uindCT"
+c     write(*,*) "Done with fphi_uindCT"
 
       return
       end

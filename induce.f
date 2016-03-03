@@ -50,7 +50,7 @@ c
 c     update the lists of previous induced dipole values
 c
       if (use_pred) then
-         write(*,*) "use_pred = ",use_pred
+c        write(*,*) "use_pred = ",use_pred
          nualt = min(nualt+1,maxualt)
          do i = 1, npole
             do j = 1, 3
@@ -177,6 +177,7 @@ c
 c
 c     "induce0a" computes the induced dipole moments at polarizable
 c     sites using a preconditioned conjugate gradient solver
+c for both direct and mutual polarization 
 c
 c
       subroutine induce0a
@@ -243,7 +244,7 @@ c DCT
       logical done
       character*6 mode
 c
-      write(*,*) "Entering induce0a"
+c     write(*,*) "Entering induce0a with poltyp ",poltyp
 c
 c     zero out the induced dipoles at each site
 c
@@ -276,7 +277,7 @@ c DCT
 c
 c     get the electrostatic field due to permanent multipoles
 c
-      write(*,*) "Initial field and induced dipole estimation."
+c     write(*,*) "Initial field and induced dipole estimation."
       if (use_ewald) then
 c        call dfield0c (field,fieldp)
          call dfield0c (field,fieldp,dfielddci,dfieldpdci)
@@ -313,7 +314,7 @@ c
 c     set tolerances for computation of mutual induced dipoles
 c
       if (poltyp .eq. 'MUTUAL') then
-         write(*,*) "MUTUAL"
+c        write(*,*) "MUTUAL"
          done = .false.
          maxiter = 500
          iter = 0
@@ -392,10 +393,10 @@ c
 c     set initial conjugate gradient residual and conjugate vector
 c MES : not sure if I need derivatives in the conj grad part
 c
-         write(*,*) "Before conj grad :"
-         write(*,*) "mu(1,1)    ",udir(1,1),uind(1,1),fieldA(1,1)
-         write(*,*) "dmu(1,1,4) ",dudir(1,1,4),duinddci(1,1,4),
-     & dfielddci(1,1,4)
+c        write(*,*) "Before conj grad :"
+c        write(*,*) "mu(1,1)    ",udir(1,1),uind(1,1),fieldA(1,1)
+c        write(*,*) "dmu(1,1,4) ",dudir(1,1,4),duinddci(1,1,4),
+c    & dfielddci(1,1,4)
          do i = 1, npole
             poli(i) = max(polmin,polarity(i))
             do j = 1, 3
@@ -454,8 +455,8 @@ c     write(*,*) "effect on 4 by 4",conj(1,4),dconj(1,4,4)
 c
 c     conjugate gradient iteration of the mutual induced dipoles
 c
-         write(*,*) "Done with setup. Starting loop."
-         write(*,*) "dipole tolerance = ",poleps
+c        write(*,*) "Done with setup. Starting loop."
+c        write(*,*) "dipole tolerance = ",poleps
          do while (.not. done)
             iter = iter + 1
             do i = 1, npole
@@ -479,8 +480,8 @@ c                 uinp(j,i) = conjp(j,i)
                end do
             end do
 c so now the uind are actually residuals
-            write(*,*) "old ",vec(1,3),dvec(1,3,4)
-            write(*,*) "new ",uind(1,3),duinddci(1,3,4)
+c           write(*,*) "old ",vec(1,3),dvec(1,3,4)
+c           write(*,*) "new ",uind(1,3),duinddci(1,3,4)
             if (use_ewald) then
 c recalculate field from new uind
 c              call ufield0c (field,fieldp)
@@ -674,7 +675,7 @@ c
 
 c field here is actually the residual/gradient 
 c     write(*,*) "field ",polarity(3)*field(1,3),fieldA(1,3)
-      write(*,*) "uind  ",uind(1,3),duinddci(1,3,4)
+c     write(*,*) "uind  ",uind(1,3),duinddci(1,3,4)
 c
 c     perform deallocation of some local arrays
 c
@@ -691,7 +692,7 @@ c
       deallocate (fieldA)
       deallocate (fieldpA)
 
-      write(*,*) "Done with induce0a."
+c     write(*,*) "Done with induce0a."
       return
       end
 c     end of induce0a routine
