@@ -49,6 +49,7 @@ c
 c
 c     update the lists of previous induced dipole values
 c
+c MES : may need to store derivative here too
       if (use_pred) then
 c        write(*,*) "use_pred = ",use_pred
          nualt = min(nualt+1,maxualt)
@@ -159,9 +160,7 @@ c
          end if
       end if
 
-c MES for debugging
-c     uind(2,3) = uind(2,3) + 0.00000001d0
-c     write(*,*) "uind(1,4) = ",uind(1,4),debye*uind(1,4)
+      write(*,*) uind(1,3),duinddci(1,3,4)
 
       return
       end
@@ -240,11 +239,13 @@ c DCT
       real*8, allocatable :: conjpA(:,:)
       real*8, allocatable :: vecA(:,:)
       real*8, allocatable :: vecpA(:,:)
+c     real*8, allocatable :: uindA(:,:)
+c     real*8, allocatable :: uinpA(:,:)
 
       logical done
       character*6 mode
 c
-c     write(*,*) "Entering induce0a with poltyp ",poltyp
+      write(*,*) "Entering induce0a with poltyp ",poltyp
 c
 c     zero out the induced dipoles at each site
 c
@@ -252,6 +253,10 @@ c
          do j = 1, 3
             uind(j,i) = 0.0d0
             uinp(j,i) = 0.0d0
+
+c DCT
+            uindA(j,i) = 0.0d0
+            uinpA(j,i) = 0.0d0
             do k = 1, npole
               duinddci(j,i,k) = 0.0d0
               duinpdci(j,i,k) = 0.0d0
@@ -308,7 +313,7 @@ c
 c     write(*,*) "udir ",udir(1,3),dudir(1,3,4)
 c     write(*,*) "uind ",uind(1,3),duinddci(1,3,4)
 c MES duinddci good here
-c     write(*,*) "effect on 3 by 4",uind(1,3),duinddci(1,3,4)
+c     write(*,*) "effect on 2 by 3",uind(1,2),duinddci(1,2,3)
 c     write(*,*) "effect on 4 by 4",uind(1,4),duinddci(1,4,4)
 c
 c     set tolerances for computation of mutual induced dipoles
@@ -368,6 +373,8 @@ c DCT
          allocate (conjpA(3,npole))
          allocate (vecA(3,npole))
          allocate (vecpA(3,npole))
+c        allocate (uindA(3,npole))
+c        allocate (uinpA(3,npole))
 c
 c     get the electrostatic field due to induced dipoles
 c
@@ -391,7 +398,6 @@ c     write(*,*) "effect on 3 by 4",uind(1,3),duinddci(1,3,4)
 c     write(*,*) "effect on 4 by 4",uind(1,4),duinddci(1,4,4)
 c
 c     set initial conjugate gradient residual and conjugate vector
-c MES : not sure if I need derivatives in the conj grad part
 c
 c        write(*,*) "Before conj grad :"
 c        write(*,*) "mu(1,1)    ",udir(1,1),uind(1,1),fieldA(1,1)
@@ -446,17 +452,22 @@ c        write(*,*) "zrsd ",zrsd(1,3),zrsdA(1,3),dzrsd(1,3,4)
                end do
             end do
          end do
+c     write(*,*) "uind "
 c     write(*,*) "effect on 3 by 4",uind(1,3),duinddci(1,3,4)
 c     write(*,*) "effect on 4 by 4",uind(1,4),duinddci(1,4,4)
-c     write(*,*) "effect on 3 by 4",conj(1,3),dconj(1,3,4)
-c     write(*,*) "effect on 4 by 4",conj(1,4),dconj(1,4,4)
+c     write(*,*) "conjA "
+c     write(*,*) "effect on 3 by 4",conjA(1,3),dconj(1,3,4)
+c     write(*,*) "effect on 4 by 4",conjA(1,4),dconj(1,4,4)
+c     write(*,*) "fieldA "
+c     write(*,*) "effect on 3 by 4",fieldA(1,3),dfielddci(1,3,4)
+c     write(*,*) "effect on 4 by 4",fieldA(1,4),dfielddci(1,4,4)
   
 
 c
 c     conjugate gradient iteration of the mutual induced dipoles
 c
-c        write(*,*) "Done with setup. Starting loop."
-c        write(*,*) "dipole tolerance = ",poleps
+         write(*,*) "Done with setup. Starting loop."
+         write(*,*) "dipole tolerance = ",poleps
          do while (.not. done)
             iter = iter + 1
             do i = 1, npole
@@ -464,13 +475,15 @@ c        write(*,*) "dipole tolerance = ",poleps
 c store old uind as vec; move current conj to uind
                   vec(j,i) = uind(j,i)
                   vecp(j,i) = uinp(j,i)
+
+                  vecA(j,i) = uind(j,i)
+                  vecpA(j,i) = uinp(j,i)
+
                   uind(j,i) = conj(j,i)
                   uinp(j,i) = conjp(j,i)
 
-c                 vec(j,i) = uind(j,i)
-c                 vecp(j,i) = uinp(j,i)
-c                 uind(j,i) = conj(j,i)
-c                 uinp(j,i) = conjp(j,i)
+                  uindA(j,i) = conjA(j,i)
+                  uinpA(j,i) = conjpA(j,i)
                   do k = 1, npole
                      dvec(j,i,k) = duinddci(j,i,k)
                      dvecp(j,i,k) = duinpdci(j,i,k)
@@ -480,8 +493,9 @@ c                 uinp(j,i) = conjp(j,i)
                end do
             end do
 c so now the uind are actually residuals
-c           write(*,*) "old ",vec(1,3),dvec(1,3,4)
-c           write(*,*) "new ",uind(1,3),duinddci(1,3,4)
+            write(*,*) "old ",vec(1,3),vecA(1,3),dvec(1,3,4)
+            write(*,*) "new ",uind(1,3),uindA(1,3),duinddci(1,3,4)
+            write(*,*) "field ",field(1,3),fieldA(1,3),dfielddci(1,3,4)
             if (use_ewald) then
 c recalculate field from new uind
 c              call ufield0c (field,fieldp)
@@ -493,13 +507,21 @@ c              call ufield0c (field,fieldp,dfielddci,dfieldpdci)
             else
                call ufield0a (field,fieldp)
             end if
+            write(*,*) "field ",field(1,3),fieldA(1,3),dfielddci(1,3,4)
             do i = 1, npole
                do j = 1, 3
 c move vec back to uind; calc new vec based on new field
                   uind(j,i) = vec(j,i)
                   uinp(j,i) = vecp(j,i)
+
+                  uindA(j,i) = vecA(j,i)
+                  uinpA(j,i) = vecpA(j,i)
+
                   vec(j,i) = conj(j,i)/poli(i) - field(j,i)
                   vecp(j,i) = conjp(j,i)/poli(i) - fieldp(j,i)
+
+                  vecA(j,i) = conjA(j,i)/poli(i) - fieldA(j,i)
+                  vecpA(j,i) = conjpA(j,i)/poli(i) - fieldpA(j,i)
 
                   do k = 1, npole
                      duinddci(j,i,k) = dvec(j,i,k)
@@ -511,6 +533,7 @@ c move vec back to uind; calc new vec based on new field
                   end do
                end do
             end do
+            write(*,*) "midway? ",uind(1,3),duinddci(1,3,4)
 
             a = 0.0d0
             ap = 0.0d0
@@ -653,6 +676,8 @@ c
          deallocate (conjpA)
          deallocate (vecA)
          deallocate (vecpA)
+c        deallocate (uindA)
+c        deallocate (uinpA)
 c
 c     print the results from the conjugate gradient iteration
 c
@@ -674,8 +699,8 @@ c
       end if
 
 c field here is actually the residual/gradient 
-c     write(*,*) "field ",polarity(3)*field(1,3),fieldA(1,3)
-c     write(*,*) "uind  ",uind(1,3),duinddci(1,3,4)
+c     write(*,*) "resid. field ",polarity(3)*field(1,3),fieldA(1,3)
+c     write(*,*) "resid. uind  ",uind(1,3),duinddci(1,3,4)
 c
 c     perform deallocation of some local arrays
 c
@@ -692,7 +717,7 @@ c
       deallocate (fieldA)
       deallocate (fieldpA)
 
-c     write(*,*) "Done with induce0a."
+      write(*,*) "Done with induce0a."
       return
       end
 c     end of induce0a routine
@@ -1790,6 +1815,7 @@ c     subroutine ufield0c (field,fieldp,dfielddci,dfieldpdci)
       real*8 fieldpA(3,*)
 c
       write(*,*) "Entering ufield0c."
+c     write(*,*) "uindA? ",uindA(1,1)
 c
 c     zero out the electrostatic field at each site
 c
@@ -3182,6 +3208,8 @@ c     subroutine umutual1 (field,fieldp,dfielddci,dfieldpdci)
       real*8, allocatable :: dipfield2(:,:)
 c DCT
       real*8, allocatable :: tmpqgrid(:,:,:,:)
+      real*8, allocatable :: fuindA(:,:)
+      real*8, allocatable :: fuinpA(:,:)
       real*8, allocatable :: dfdip_phi1(:,:,:)
       real*8, allocatable :: dfdip_phi2(:,:,:)
       real*8, allocatable :: dfdip_sum_phi(:,:,:)
@@ -3210,6 +3238,8 @@ c
       allocate (dipfield2(3,npole))
 c DCT
       allocate (tmpqgrid(2,nfft1,nfft2,nfft3))
+      allocate (fuindA(3,npole))
+      allocate (fuinpA(3,npole))
       allocate (dfdip_phi1(10,npole,npole))
       allocate (dfdip_phi2(10,npole,npole))
       allocate (dfdip_sum_phi(20,npole,npole))
@@ -3223,6 +3253,8 @@ c DCT
 c
 c     convert Cartesian dipoles to fractional coordinates
 c
+      write(*,*) field(1,3),fieldA(1,3),dfielddci(1,3,4)
+
       do i = 1, 3
          a(1,i) = dble(nfft1) * recip(i,1)
          a(2,i) = dble(nfft2) * recip(i,2)
@@ -3235,6 +3267,10 @@ c
             fuinp(k,i) = a(k,1)*uinp(1,i) + a(k,2)*uinp(2,i)
      &                      + a(k,3)*uinp(3,i)
 c MES
+            fuindA(k,i) = a(k,1)*uindA(1,i) + a(k,2)*uindA(2,i)
+     &                      + a(k,3)*uindA(3,i)
+            fuinpA(k,i) = a(k,1)*uinpA(1,i) + a(k,2)*uinpA(2,i)
+     &                      + a(k,3)*uinpA(3,i)
             do j = 1, npole
               dfuinddci(k,i,j) = a(k,1)*duinddci(1,i,j) 
      & + a(k,2)*duinddci(2,i,j) + a(k,3)*duinddci(3,i,j)
@@ -3245,7 +3281,7 @@ c MES
       end do
 c
       write(*,*) uind(1,3),duinddci(1,3,4)
-      write(*,*) fuind(1,3),dfuinddci(1,3,4)
+      write(*,*) fuind(1,3),fuindA(1,3),dfuinddci(1,3,4)
 
 c     assign PME grid and perform 3-D FFT forward transform
 c
@@ -3498,8 +3534,7 @@ c MES
          end do
       end do
 c     write(*,*) "field"
-c     write(*,*) field(1,3),fieldA(1,3),
-c    & dfielddci(1,3,4)
+      write(*,*) field(1,3),fieldA(1,3),dfielddci(1,3,4)
 c
 c     perform deallocation of some local arrays
 c
@@ -4072,7 +4107,7 @@ c MES
 c
 c     perform deallocation of some local arrays
 c
-c     write(*,*) field(1,3),fieldA(1,3),dfielddci(1,3,4)
+      write(*,*) field(1,3),fieldA(1,3),dfielddci(1,3,4)
 
       deallocate (fieldt)
       deallocate (fieldtp)

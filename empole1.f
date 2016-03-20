@@ -4604,7 +4604,7 @@ c
 c
 c     compute the reciprocal space part of the Ewald summation
 c
-      call emrecip1
+c     call emrecip1
       write(*,*) "after emrecip"
       write(*,*) "em, dedci(4) ",em,dedci(4)
       write(*,*) "ep, depdci(4) ",ep,depdci(4)
@@ -4828,7 +4828,7 @@ c
 c DCT
       use potent
       implicit none
-      integer i,j,k
+      integer i,j,k,isite
       integer ii,kk,kkk
       integer iax,iay,iaz
       integer kax,kay,kaz
@@ -4899,10 +4899,22 @@ c DCT
       real*8 gti(6),gtri(6)
       real*8 viro(3,3)
 c DCT 
-      real*8 dsci1dci,dsci1dck,dsci3dci,dsci3dck,dsci4dci,dsci4dck
-      real*8 dsci7dci,dsci7dck,dsci8dci,dsci8dck
-      real*8 dgli1dci,dgli1dck,dgli2dci,dgli2dck,dgli3dci,dgli3dck
-      real*8 dgli6dci,dgli6dck,dgli7dci,dgli7dck
+      real*8 dsci1dciA,dsci1dckA,dsci3dciA,dsci3dckA,dsci4dciA,dsci4dckA
+      real*8 dsci7dciA,dsci7dckA,dsci8dciA,dsci8dckA
+      real*8 dgli1dciA,dgli1dckA,dgli2dciA,dgli2dckA,dgli3dciA,dgli3dckA
+      real*8 dgli6dciA,dgli6dckA,dgli7dciA,dgli7dckA
+      real*8, allocatable :: deidci(:,:)
+      real*8, allocatable :: dsci1dci(:)
+      real*8, allocatable :: dsci3dci(:)
+      real*8, allocatable :: dsci4dci(:)
+      real*8, allocatable :: dsci7dci(:)
+      real*8, allocatable :: dsci8dci(:)
+      real*8, allocatable :: dgli1dci(:)
+      real*8, allocatable :: dgli2dci(:)
+      real*8, allocatable :: dgli3dci(:)
+      real*8, allocatable :: dgli6dci(:)
+      real*8, allocatable :: dgli7dci(:)
+
       real*8, allocatable :: mscale(:)
       real*8, allocatable :: pscale(:)
       real*8, allocatable :: dscale(:)
@@ -4930,6 +4942,17 @@ c
       allocate (demo2(3,n))
       allocate (depo1(3,n))
       allocate (depo2(3,n))
+      allocate (deidci(n,n))
+      allocate (dsci1dci(n))
+      allocate (dsci3dci(n))
+      allocate (dsci4dci(n))
+      allocate (dsci7dci(n))
+      allocate (dsci8dci(n))
+      allocate (dgli1dci(n))
+      allocate (dgli2dci(n))
+      allocate (dgli3dci(n))
+      allocate (dgli6dci(n))
+      allocate (dgli7dci(n))
 c
 c     set arrays needed to scale connected atom interactions
 c
@@ -4983,9 +5006,17 @@ c
 !$OMP& qidk,qkdi,qir,qkr,qiqkr,qkqir,qixqk,rxqir,dixr,dkxr,
 !$OMP& dixqkr,dkxqir,rxqkr,qkrxqir,rxqikr,rxqkir,rxqidk,rxqkdi,
 !$OMP& ddsc3,ddsc5,ddsc7,bn,sc,gl,sci,scip,gli,glip,gf,gfi,
-!$OMP& gfr,gfri,gti,gtri,dorl,dorli)
+!$OMP& gfr,gfri,gti,gtri,dorl,dorli,
+!$OMP& dsci1dciA,dsci1dckA,dsci3dciA,dsci3dckA,dsci4dciA,dsci4dckA,
+!$OMP& dsci7dciA,dsci7dckA,dsci8dciA,dsci8dckA,
+!$OMP& dgli1dciA,dgli1dckA,dgli3dciA,dgli3dckA,dgli2dciA,dgli2dckA,
+!$OMP& dgli7dciA,dgli7dckA,dgli6dciA,dgli6dckA,
+!$OMP& dsci1dci,dsci1dck,dsci3dci,dsci3dck,dsci4dci,dsci4dck,
+!$OMP& dsci7dci,dsci7dck,dsci8dci,dsci8dck,
+!$OMP& dgli1dci,dgli1dck,dgli3dci,dgli3dck,dgli2dci,dgli2dck,
+!$OMP& dgli7dci,dgli7dck,dgli6dci,dgli6dck,deidci)
 !$OMP& firstprivate(mscale,pscale,dscale,uscale)
-!$OMP DO reduction(+:emo,epo,eintrao,demo1,demo2,depo1,depo2,viro)
+!$OMP DO reduction(+:emo,epo,eintrao,demo1,demo2,depo2,viro)
 !$OMP& schedule(guided)
 c
 c
@@ -5302,44 +5333,74 @@ c
 
 c DCT
                if (use_crgtr) then
-                   dsci1dci = duinddci(1,i,i)*dk(1) 
+                 do isite = 1, npole
+                   dsci1dci(isite) = duinddci(1,i,isite)*dk(1) 
+     &                     + duinddci(2,i,isite)*dk(2)
+     &                     + duinddci(3,i,isite)*dk(3) 
+     &                     + di(1)*duinddci(1,k,isite)
+     &                     + di(2)*duinddci(2,k,isite) 
+     &                     + di(3)*duinddci(3,k,isite)
+                  dsci3dci(isite) = duinddci(1,i,isite)*xr 
+     &                     + duinddci(2,i,isite)*yr 
+     &                     + duinddci(3,i,isite)*zr
+                  dsci4dci(isite) = duinddci(1,k,isite)*xr
+     &                     + duinddci(2,k,isite)*yr
+     &                     + duinddci(3,k,isite)*zr
+                  dsci7dci(isite) = qir(1)*duinddci(1,k,isite) 
+     &                     + qir(2)*duinddci(2,k,isite) 
+     &                     + qir(3)*duinddci(3,k,isite)
+                  dsci8dci(isite) = qkr(1)*duinddci(1,i,isite) 
+     &                     + qkr(2)*duinddci(2,i,isite) 
+     &                     + qkr(3)*duinddci(3,i,isite)
+
+                  dsci1dciA = duinddci(1,i,i)*dk(1) 
      &                     + duinddci(2,i,i)*dk(2)
      &                     + duinddci(3,i,i)*dk(3) 
      &                     + di(1)*duinddci(1,k,i)
      &                     + di(2)*duinddci(2,k,i) 
      &                     + di(3)*duinddci(3,k,i)
-                  dsci1dck = duinddci(1,i,k)*dk(1) 
+                  dsci1dckA = duinddci(1,i,k)*dk(1) 
      &                     + duinddci(2,i,k)*dk(2)
      &                     + duinddci(3,i,k)*dk(3) 
      &                     + di(1)*duinddci(1,k,k)
      &                     + di(2)*duinddci(2,k,k) 
      &                     + di(3)*duinddci(3,k,k)
-                  dsci3dci = duinddci(1,i,i)*xr 
+                  dsci3dciA = duinddci(1,i,i)*xr 
      &                     + duinddci(2,i,i)*yr 
      &                     + duinddci(3,i,i)*zr
-                  dsci3dck = duinddci(1,i,k)*xr
+                  dsci3dckA = duinddci(1,i,k)*xr
      &                     + duinddci(2,i,k)*yr
      &                     + duinddci(3,i,k)*zr
-                  dsci4dci = duinddci(1,k,i)*xr
+                  dsci4dciA = duinddci(1,k,i)*xr
      &                     + duinddci(2,k,i)*yr
      &                     + duinddci(3,k,i)*zr
-                  dsci4dck = duinddci(1,k,k)*xr
+                  dsci4dckA = duinddci(1,k,k)*xr
      &                     + duinddci(2,k,k)*yr
      &                     + duinddci(3,k,k)*zr
-                  dsci7dci = qir(1)*duinddci(1,k,i) 
-     &                     + qir(2)*duinddci(2,k,i)
-     &                     + qir(3)*duinddci(3,k,i)
-                  dsci7dck = qir(1)*duinddci(1,k,k)
-     &                     + qir(2)*duinddci(2,k,k)
-     &                     + qir(3)*duinddci(3,k,k)
-                  dsci8dci = qkr(1)*duinddci(1,i,i) 
-     &                     + qkr(2)*duinddci(2,i,i)
-     &                     + qkr(3)*duinddci(3,i,i)
-                  dsci8dci = qkr(1)*duinddci(1,i,k)
-     &                     + qkr(2)*duinddci(2,i,k)
-     &                     + qkr(3)*duinddci(3,i,k)
+                  dsci7dciA = qir(1)*duinddci(1,k,i) +
+     & qir(2)*duinddci(2,k,i) + qir(3)*duinddci(3,k,i)
+                  dsci7dckA = qir(1)*duinddci(1,k,k) +
+     & qir(2)*duinddci(2,k,k) + qir(3)*duinddci(3,k,k)
+                  dsci8dciA = qkr(1)*duinddci(1,i,i) +
+     & qkr(2)*duinddci(2,i,i) + qkr(3)*duinddci(3,i,i)
+                  dsci8dckA = qkr(1)*duinddci(1,i,k) +
+     & qkr(2)*duinddci(2,i,k) + qkr(3)*duinddci(3,i,k)
+                 end do
                endif
-
+c              if (i.eq.4 .or. k.eq.4) then
+c                write(*,*) "sci  i ",i," k ",k
+c                write(*,*) sci(1),dsci1dci,dsci1dck
+c                write(*,*) sci(3),dsci3dci,dsci3dck
+c                write(*,*) sci(4),dsci4dci,dsci4dck
+c                write(*,*) sci(7),dsci7dci,dsci7dck
+c                write(*,*) sci(8),dsci8dci,dsci8dck
+c                write(*,*) "qir ",qir(1),qir(2),qir(3)
+c                write(*,*) "qkr ",qkr(1),qkr(2),qkr(3)
+c                write(*,*) "duinddci ",duinddci(1,i,i),duinddci(2,i,i),
+c    & duinddci(3,i,i)
+c                write(*,*) "duinddck ",duinddci(1,i,k),duinddci(2,i,k),
+c    & duinddci(3,i,k)
+c              end if
 c
 c     calculate the gl functions for permanent components
 c
@@ -5368,17 +5429,37 @@ c
 c
 c DCT
                if (use_crgtr) then
-                  dgli1dci = ck*dsci3dci - sci(4) - ci*dsci4dci
-                  dgli1dck = sci(3) + ck*dsci3dck - ci*dsci4dck
-                  dgli2dci = -sc(3)*dsci4dci - sc(4)*dsci3dci
-                  dgli2dck = -sc(3)*dsci4dck - sc(4)*dsci3dck
-                  dgli3dci = sc(6)*dsci3dci - sc(5)*dsci4dci
-                  dgli3dck = sc(6)*dsci3dck - sc(5)*dsci4dck
-                  dgli6dci = dsci1dci
-                  dgli6dck = dsci1dck
-                  dgli7dci = 2.0d0*( dsci7dci - dsci8dci )
-                  dgli7dck = 2.0d0*( dsci7dck - dsci8dck )
+                  do isite = 1, npole
+                     dgli1dci(isite) = ck*dsci3dci(isite) 
+     & - ci*dsci4dci(isite)
+                     dgli2dci(isite) = -sc(3)*dsci4dci(isite) 
+     & - sc(4)*dsci3dci(isite)
+                     dgli3dci(isite) = sc(6)*dsci3dci(isite) 
+     & - sc(5)*dsci4dci(isite)
+                     dgli6dci(isite) = dsci1dci(isite)
+                     dgli7dci(isite) = 2.0d0*( dsci7dci(isite) - 
+     & dsci8dci(isite) )
+
+                  dgli1dciA = ck*dsci3dciA - sci(4) - ci*dsci4dciA
+                  dgli1dckA = sci(3) + ck*dsci3dckA - ci*dsci4dckA
+                  dgli2dciA = -sc(3)*dsci4dciA - sc(4)*dsci3dciA
+                  dgli2dckA = -sc(3)*dsci4dckA - sc(4)*dsci3dckA
+                  dgli3dciA = sc(6)*dsci3dciA - sc(5)*dsci4dciA
+                  dgli3dckA = sc(6)*dsci3dckA - sc(5)*dsci4dckA
+                  dgli6dciA = dsci1dciA
+                  dgli6dckA = dsci1dckA
+                  dgli7dciA = 2.0d0*( dsci7dciA - dsci8dciA )
+                  dgli7dckA = 2.0d0*( dsci7dckA - dsci8dckA )
+                  end do
                endif
+c              if (i.eq.4 .or. k.eq.4) then
+c                write(*,*) "gli   i ",i," k ",k
+c                write(*,*) gli(1),dgli1dci,dgli1dck
+c                write(*,*) gli(2),dgli2dci,dgli2dck
+c                write(*,*) gli(3),dgli3dci,dgli3dck
+c                write(*,*) gli(6),dgli6dci,dgli6dck
+c                write(*,*) gli(7),dgli7dci,dgli7dck
+c              end if
 
 c     compute the energy contributions for this interaction
 c       this is Ewald : bn(0) =  erfc/r
@@ -5400,6 +5481,8 @@ c
      &                   + rr5*(gli(2)+gli(7))*psc5
      &                   + rr7*gli(3)*psc7)
                e = e - erl * (1.0d0-mscale(kk))
+c              write(*,*) i,k
+c              write(*,*) f*ei,-f*erli
                ei = ei - erli
                e = f * e
                ei = f * ei
@@ -5416,23 +5499,47 @@ c    includes e, ei, erl, erli
      & + bn(2)*sc(5) - (1.0d0-mscale(kk))*(rr1*ci + rr3*sc(3)
      & + rr5*sc(5)))
 
-c old version
-c                depdci(i) = depdci(i) + 0.50d0*f
-c    & *sci(4)*(rr3*psc3 - bn(1))
-c                depdci(k) = depdci(k) + 0.50d0*f
-c    & *sci(3)*(bn(1) - rr3*psc3)
-
 c new version
+c                write(*,*) i,k,ei
+                 do isite = 1, npole
+                    if (isite.ne.i .and. isite.ne.k) then
+                    depdci(isite) = depdci(isite) + 0.50d0*f*
+     & ( bn(1)*dgli1dci(isite) + bn(1)*dgli6dci(isite) 
+     & + bn(2)*dgli2dci(isite) 
+     & + bn(2)*dgli7dci(isite) + bn(3)*dgli3dci(isite)) 
+     & - 0.5d0*f*(rr3*psc3*dgli1dci(isite)
+     & + rr3*psc3*dgli6dci(isite) + rr5*psc5*dgli2dci(isite) 
+     & + rr5*psc5*dgli7dci(isite)
+     & + rr7*psc7*dgli3dci(isite) )
+                    end if
+c                   write(*,*) isite,depdci(isite)
+                 end do
+
                  depdci(i) = depdci(i) + 0.50d0*f*
-     & ( bn(1)*dgli1dci + bn(1)*dgli6dci + bn(2)*dgli2dci 
-     & + bn(2)*dgli7dci + bn(3)*dgli3dci - rr3*psc3*dgli1dci
-     & - rr3*psc3*dgli6dci - rr5*psc5*dgli2dci - rr5*psc5*dgli7dci
-     & - rr7*psc7*dgli3dci )
+     & ( bn(1)*dgli1dciA + bn(1)*dgli6dciA + bn(2)*dgli2dciA 
+     & + bn(2)*dgli7dciA + bn(3)*dgli3dciA) 
+     & - 0.5d0*f*(rr3*psc3*dgli1dciA
+     & + rr3*psc3*dgli6dciA + rr5*psc5*dgli2dciA + rr5*psc5*dgli7dciA
+     & + rr7*psc7*dgli3dciA )
                  depdci(k) = depdci(k) + 0.50d0*f*
-     & ( bn(1)*dgli1dck + bn(1)*dgli6dck + bn(2)*dgli2dck 
-     & + bn(2)*dgli7dck + bn(3)*dgli3dck - rr3*psc3*dgli1dck 
-     & - rr3*psc3*dgli6dck - rr5*psc5*dgli2dck - rr5*psc5*dgli7dck 
-     & - rr7*psc7*dgli3dck )
+     & ( bn(1)*dgli1dckA + bn(1)*dgli6dckA + bn(2)*dgli2dckA 
+     & + bn(2)*dgli7dckA + bn(3)*dgli3dckA) 
+     & - 0.5d0*f*(rr3*psc3*dgli1dckA 
+     & + rr3*psc3*dgli6dckA + rr5*psc5*dgli2dckA + rr5*psc5*dgli7dckA 
+     & + rr7*psc7*dgli3dckA )
+
+c                write(*,*) 0.50d0*f*
+c    & ( bn(1)*dgli1dci + bn(1)*dgli6dci + bn(2)*dgli2dci
+c    & + bn(2)*dgli7dci + bn(3)*dgli3dci),
+c    & -0.50d0*f*(rr3*psc3*dgli1dci
+c    & + rr3*psc3*dgli6dci + rr5*psc5*dgli2dci + rr5*psc5*dgli7dci
+c    & + rr7*psc7*dgli3dci )
+c                write(*,*) 0.50d0*f*
+c    & ( bn(1)*dgli1dck + bn(1)*dgli6dck + bn(2)*dgli2dck
+c    & + bn(2)*dgli7dck + bn(3)*dgli3dck),
+c    & -0.50d0*f*(rr3*psc3*dgli1dck
+c    & + rr3*psc3*dgli6dck + rr5*psc5*dgli2dck + rr5*psc5*dgli7dck
+c    & + rr7*psc7*dgli3dck )
                end if
 
 c
@@ -5975,6 +6082,17 @@ c
       deallocate (demo2)
       deallocate (depo1)
       deallocate (depo2)
+      deallocate (deidci)
+      deallocate (dsci1dci)
+      deallocate (dsci3dci)
+      deallocate (dsci4dci)
+      deallocate (dsci7dci)
+      deallocate (dsci8dci)
+      deallocate (dgli1dci)
+      deallocate (dgli2dci)
+      deallocate (dgli3dci)
+      deallocate (dgli6dci)
+      deallocate (dgli7dci)
       return
       end
 c end of ereal1d

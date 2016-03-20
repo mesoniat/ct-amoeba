@@ -33,6 +33,8 @@ c
       real*8, allocatable :: uinds(:,:)
       real*8, allocatable :: uinps(:,:)
 c DCT
+      real*8, allocatable :: uindA(:,:)
+      real*8, allocatable :: uinpA(:,:)
       real*8, allocatable :: duinddci(:,:,:)
       real*8, allocatable :: duinpdci(:,:,:)
       real*8, allocatable :: dfuinddci(:,:,:)

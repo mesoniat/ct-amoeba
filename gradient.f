@@ -453,10 +453,8 @@ c hydrogen charges
  
 c for testing dedci
       dq = 0.0000d0
-      write(*,*) "dq = ",dq
       rpole(1,4) = rpole(1,4) + dq
-      write(*,*) "q(4) = ",rpole(1,4)
-c     write(*,*) "q(3) = ",rpole(1,3)
+      write(*,*) "dq = ",dq,"q(4) = ",rpole(1,4)
 
 c copy new charge to other reference frame
       do i=1,n
@@ -466,7 +464,6 @@ c copy new charge to other reference frame
       sum1 = 0.d0
       sum2 = 0.d0
 c total charge - should equal charge of system (usually zero)
-c     write(*,*) "number HB and derivatives wrt r"
 c     do i=1,n
 c       sum1 = sum1 + rpole0(i)
 c       sum2 = sum2 + rpole(1,i)
